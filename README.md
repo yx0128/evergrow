@@ -10,6 +10,9 @@
 
 </div>
 
+> **Project docs:** [agent handoff](docs/AGENT_HANDOFF.md) · [spec](docs/SPEC.md) · [build state](STATE.md)
+
+
 ---
 
 ## Table of contents

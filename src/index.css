@@ -1,0 +1,30 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+}
+
+#root {
+  isolation: isolate;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+}
+
+.app-canvas {
+  position: absolute !important;
+  inset: 0;
+}

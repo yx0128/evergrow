@@ -10,3 +10,5 @@ coverage/
 .vite/
 *.log
 Brief.txt
+brief.txt
+BRIEF.md
