@@ -78,11 +78,12 @@ docs/                           # spec + this handoff
 
 - `world.startZone = 10` is even, so the starter grid is centred by offsetting
   half a zone (`-startZone/2 .. startZone/2-1`), not by an odd centre cell.
-- One placeholder starter item, `sprout`, exists in the catalog. Its `.glb` and
-  `.png` are not created yet; shop cards should use placeholders until then.
+- The item catalog and starter inventory are intentionally empty (`items: []`,
+  `starter.items: []`) until the item list is decided. Per the brief, the tutorial's
+  drag step runs after "visit the shop" when there is no starter item.
 - The day background from `palette.background.day` is used until day/night exists.
-- Zoom limits assume an orthographic camera. Confirm the projection before building
-  `CameraRig`.
+- The camera is **orthographic**. The `minZoom`/`maxZoom` values operate on an
+  orthographic camera's zoom.
 - Fonts are configured by family name only. Font files must be added to
   `public/assets/fonts/`.
 - The config uses an explicit `: EvergrowConfig` annotation, so assigning a value of

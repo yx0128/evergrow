@@ -216,7 +216,6 @@ export const evergrowConfig: EvergrowConfig = {
   camera: {
     minPolarDeg: 20,
     maxPolarDeg: 80,
-    // TODO(decision): zoom values assume an orthographic camera; confirm the projection.
     minZoom: 12,
     maxZoom: 48,
     snapRotateDeg: 90,
@@ -267,8 +266,8 @@ export const evergrowConfig: EvergrowConfig = {
 
   starter: {
     coins: 0,
-    // TODO(decision): the starter item has no exported model or thumbnail yet.
-    items: ['sprout'],
+    // TODO(decision): starter item undecided; start with an empty inventory.
+    items: [],
   },
 
   palette: {
@@ -297,23 +296,8 @@ export const evergrowConfig: EvergrowConfig = {
     water: { name: 'Water', transparent: true },
   },
 
-  // TODO(decision): only the starter item exists; add the remaining catalog when chosen.
-  items: [
-    {
-      id: 'sprout',
-      name: 'Sprout',
-      category: 'plants',
-      price: 5,
-      footprint: [1, 1],
-      defaultTile: 'grass',
-      allowedTiles: ['grass', 'land'],
-      connectable: false,
-      rotatable: true,
-      model: '/assets/models/sprout.glb',
-      thumb: '/assets/thumbs/sprout.png',
-      emissive: false,
-    },
-  ],
+  // TODO(decision): item catalog pending; add items once the list is chosen.
+  items: [],
 
   strings: {
     invalid: {

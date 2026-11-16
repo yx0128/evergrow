@@ -116,9 +116,9 @@ describe('evergrow config', () => {
     }
   })
 
-  it('starts with an affordable, known starter item', () => {
+  it('starts with zero coins and only known starter items', () => {
     expect(config.starter.coins).toBeGreaterThanOrEqual(0)
-    expect(config.starter.items.length).toBe(1)
+    expect(config.starter.items.length).toBeLessThanOrEqual(1)
     const ids = new Set(config.items.map((item) => item.id))
     for (const id of config.starter.items) expect(ids.has(id)).toBe(true)
   })

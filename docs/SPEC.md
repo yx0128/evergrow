@@ -110,6 +110,7 @@ and 1 starter item.
 
 ## Camera
 
+- Orthographic projection.
 - 360° orbit; polar 20°–80°; zoom clamped; target clamped to land + margin.
 - Orbit: right-drag, Q/E snap 90°, PageUp/PageDown tilt.
 - Pan: middle-drag or Shift+right-drag, WASD/arrows.
