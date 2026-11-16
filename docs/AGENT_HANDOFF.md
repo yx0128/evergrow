@@ -103,4 +103,5 @@ npm run dev      # full-window canvas in the day background colour
 - `credential.helper = store` is configured globally; pushing should not prompt for
   Keychain repeatedly. Batch git operations and push once per task.
 - Repository: https://github.com/yx0128/evergrow
+- Live demo: https://yx0128.github.io/evergrow/ (GitHub Pages, deployed by `.github/workflows/deploy.yml`)
 - Default branch: `main`.

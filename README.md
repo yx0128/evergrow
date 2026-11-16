@@ -4,7 +4,7 @@
 
 **To-do list meets cozy world-building.**
 
-[Live demo]([DEMO_URL]) · [Report a bug](https://github.com/yx0128/evergrow/issues) · [Request a feature](https://github.com/yx0128/evergrow/issues)
+[Live demo](https://yx0128.github.io/evergrow/) · [Report a bug](https://github.com/yx0128/evergrow/issues) · [Request a feature](https://github.com/yx0128/evergrow/issues)
 
 ![Evergrow screenshot]([PATH_TO_SCREENSHOT_OR_GIF])
 
