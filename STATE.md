@@ -1,7 +1,8 @@
 # Session state
 
-Generated from the OpenCode session database at the end of the scaffold task.
-Values cover this build session only and will not update themselves.
+First session for this version of the project. It covers the scaffold, docs and
+initial repository setup. Previous sessions belong to the old version and are
+excluded. These are snapshot values and will not update themselves.
 
 ## Credits
 
@@ -9,24 +10,16 @@ Values cover this build session only and will not update themselves.
 - **Model:** `deepseek-v4.1-flash` (provider `opencode-go`)
 - **Repository:** https://github.com/yx0128/evergrow
 
-## Time
+## Session
 
-| Scope | Window (UTC) | Elapsed |
-|---|---|---|
-| Whole session (repo setup → scaffold) | 2026-11-16 16:45:59 → 18:13:20 | 1 h 27 min |
-| Scaffold task only | 2026-11-16 18:06:51 → 18:13:20 | 6 min 29 s |
+| Session | Duration | Input | Output | Reasoning | Cache read | Non-cache total | Cost |
+|---|---|---|---|---|---|---|---|
+| Scaffold session | 1h 38m 54s | 138,056 | 23,224 | 20,145 | 4,351,232 | 181,425 | $0.059783 |
 
-The "entire game" is not built yet. This record covers the scaffold phase.
+Total consumption including cache-read tokens: **4,532,657 tokens**.
 
-## Token usage
-
-| Scope | Input | Output | Reasoning | Cache read | Total (in+out+reasoning) | Estimated cost |
-|---|---|---|---|---|---|---|
-| Whole session | 111,170 | 14,488 | 11,911 | 2,408,064 | 137,569 | $0.0397 |
-| Scaffold task | 32,248 | 11,934 | 9,993 | 1,679,744 | 54,175 | $0.0230 |
-
-Totals exclude cache-read tokens (they are reported separately because cached input
-is much cheaper). The provider reports cost per message.
+Duration is wall-clock from session creation to the last recorded update, so it
+includes time between messages. The game is still at the scaffold stage.
 
 ## How to refresh
 
@@ -34,9 +27,10 @@ OpenCode stores sessions in `~/.local/share/opencode/opencode.db`:
 
 ```bash
 sqlite3 -header -column ~/.local/share/opencode/opencode.db \
-  "select model,cost,tokens_input,tokens_output,tokens_reasoning,
+  "select title,cost,tokens_input,tokens_output,tokens_reasoning,
           tokens_cache_read,tokens_cache_write,time_created,time_updated
-   from session order by time_updated desc limit 1;"
+   from session
+   where id = 'ses_e1abfb19dffekHkhNg0c1NytP4';"
 ```
 
 Per-message token detail is in the `message` table (`data` JSON column) filtered by
