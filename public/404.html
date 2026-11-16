@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Evergrow</title>
+    <script>
+      (function () {
+        var repo = location.pathname.split('/')[1]
+        var root = repo ? '/' + repo + '/' : '/'
+        location.replace(root + location.search + location.hash)
+      })()
+    </script>
+  </head>
+  <body>
+    <p><a href="./">Continue to Evergrow</a></p>
+  </body>
+</html>

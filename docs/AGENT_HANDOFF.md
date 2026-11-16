@@ -72,7 +72,12 @@ docs/                           # spec + this handoff
    `paint`, `setLevel`, `digUp`, `sell`, `store`) so undo/redo is uniform.
 4. Never store absolute Y. Derive it as `level * world.tileThickness`.
 5. Autosave to localStorage, debounced with `ui.autosaveDebounceMs`, including
-   `saveSchemaVersion`.
+   `saveSchemaVersion`. Every key must go through `storageKey()` in
+   `src/assets/assetUrl.ts`, which prefixes `ui.storagePrefix` (`evergrow:`) because
+   all `*.github.io` project sites share one origin.
+6. Never hard-code a leading-slash public URL. Build model, thumbnail, audio and font
+   URLs with `assetUrl()` from `src/assets/assetUrl.ts`, and keep catalog paths
+   relative (`assets/models/...`).
 
 ## Current decisions / assumptions
 
@@ -89,13 +94,27 @@ docs/                           # spec + this handoff
 - The config uses an explicit `: EvergrowConfig` annotation, so assigning a value of
   the wrong type is a compile error.
 
+## Deployment
+
+GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
+(or manually via `workflow_dispatch`).
+
+- Builds use `base: "/<repo>/"` (derived from `GITHUB_REPOSITORY`, overridable with
+  `VITE_BASE_PATH`). Local dev always uses `/`.
+- Order: checkout → Node 20 → `npm ci` → `npm test` → `npm run build` → upload
+  `dist/` → deploy. A test failure stops the deploy.
+- `public/404.html` redirects unknown paths back to the project root while preserving
+  the query string and hash for future SPA routes.
+- Live URL: https://yx0128.github.io/evergrow/
+
 ## Verification
 
 ```bash
-npm test         # 12 config tests
-npm run build    # tsc -b + vite build
+npm test         # 15 tests (config + asset/storage helpers)
+npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
-npm run dev      # full-window canvas in the day background colour
+npm run dev      # full-window canvas in the day background colour at "/"
+VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 ```
 
 ## Git / auth notes

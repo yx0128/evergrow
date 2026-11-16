@@ -26,6 +26,7 @@ localStorage, Blender + Python for assets.
 - World mutations only through commands (undo/redo).
 - Y is derived, never stored: `level * tileThickness`.
 - Save with `schemaVersion` and migrations. Autosave debounced ~500 ms.
+- Prefix every localStorage key with `evergrow:` (shared github.io origin).
 
 ## Core loop
 

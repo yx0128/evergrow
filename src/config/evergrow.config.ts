@@ -93,6 +93,7 @@ export interface VariationConfig {
 export interface UiConfig {
   toastMs: number
   autosaveDebounceMs: number
+  storagePrefix: string
 }
 
 export interface StarterConfig {
@@ -130,7 +131,9 @@ export interface ItemDef {
   allowedTiles: TileType[]
   connectable: boolean
   rotatable: boolean
+  /** Relative public path, e.g. "assets/models/cottage.glb". */
   model: string
+  /** Relative public path, e.g. "assets/thumbs/cottage.png". */
   thumb: string
   emissive: boolean
   pointLight?: { color: string; intensity: number; distance: number }
@@ -262,6 +265,7 @@ export const evergrowConfig: EvergrowConfig = {
   ui: {
     toastMs: 3000,
     autosaveDebounceMs: 500,
+    storagePrefix: 'evergrow:',
   },
 
   starter: {
