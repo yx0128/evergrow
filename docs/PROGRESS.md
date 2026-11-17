@@ -10,6 +10,17 @@ tile cells and column levels. The typed config catalog exists and a full-window
 orthographic R3F canvas renders the day background. Logic is not wired to stores,
 rendering or commands yet.
 
+## Workflow rules
+
+- Work on a branch, never directly on main: step/<short-name> for a build step, fix/<short-name> for review fixes, docs/<short-name> for docs-only work.
+- Commit messages are a subject only: imperative, sentence case, no prefix, no body, no trailers (no Co-Authored-By). Record the what, why and verification in this file's log entry instead.
+- npm test, npm run build and npm run lint must pass before every commit.
+- Merge into main only after a review says READY, as one squash commit: git switch main && git merge --squash <branch> && git commit -m "<subject>", then git branch -D <branch> (-D because Git doesn't treat squash-merged branches as merged).
+- Don't rewrite commits already pushed to origin/main. Fix forward with a new commit.
+- Push main once per task, after the merge. GitHub Pages deploys every push to main.
+- Record build, fix and docs sessions in docs/STATE.md. Don't record review sessions.
+- Each session prompt names its type (BUILD, FIX, DOCS or REVIEW). Review sessions report only and change no code or docs.
+
 ## Log
 
 ### 2026-11-17
@@ -282,6 +293,7 @@ were explicitly out of scope here.
 - Repository: https://github.com/yx0128/evergrow
 - Live demo: https://yx0128.github.io/evergrow/ (GitHub Pages, deployed by `.github/workflows/deploy.yml`)
 - Default branch: `main`.
+- Branch and commit rules: see Workflow rules above (D021).
 
 ### 2026-11-17 — storage, redirect and favicon review
 
@@ -375,3 +387,11 @@ Tests remain 33.
   and `.test.tsx`.
 - Tests: 86 → 88. `npm test`, `npm run build` (existing chunk warning) and
   `npm run lint` pass.
+
+### 2026-11-18 — docs: branch and commit workflow
+
+- Added "Workflow rules" after Status: branch naming, subject-only commits, required
+  checks, squash merge after READY, no rewriting pushed history, and one push per task.
+- Added D021 and pointed the Git/auth notes at the rules.
+- Updated CONTRIBUTING's commit guidance to keep what/why/verification in PROGRESS.
+- Code unchanged. `npm test` (88), `npm run build` and `npm run lint` pass.

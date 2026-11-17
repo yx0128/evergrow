@@ -32,7 +32,7 @@ npm run build
 ## Commits and pull requests
 
 - Use a short imperative commit subject.
-- Describe what changed, why, and how it was verified.
+- Commit subject only (no body or trailers); describe what changed, why and how it was verified in docs/PROGRESS.md. Full rules: docs/PROGRESS.md "Workflow rules".
 - Include screenshots or recordings for visual changes.
 - Ensure `npm test`, `npm run lint` and `npm run build` pass.
 
