@@ -43,6 +43,9 @@ Evergrow turns your progress into a cozy little world. Every task you complete e
 3. **Grow your world.** Spend your coins on plants, buildings and decorations.
 4. **Look back.** Your world becomes a reminder of everything you've done.
 
+> **Note:** The features below are planned. The current build is a scaffold with a
+> full-window canvas and no game systems yet.
+
 ## Features
 
 ### Tasks
@@ -132,9 +135,6 @@ Every tunable value is in one file: `src/config/evergrow.config.ts`. That includ
 - See [D004–D006](docs/DECISIONS.md).
 
 ## Usage
-
-> **Note:** The features below are planned. The current build is a scaffold with a
-> full-window canvas and no game systems yet.
 
 1. **Place your first item.** Open the inventory, drag your starter item into the world, and let go when the preview snaps into place.
 2. **Add a task.** Press `N`, type a task, pick its size and press Enter. Add subtasks if it's a bigger one.

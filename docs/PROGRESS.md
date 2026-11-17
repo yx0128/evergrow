@@ -182,7 +182,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 29 tests (config, catalog, assets, UI, redirect)
+npm test         # 31 tests (config, catalog, assets, UI, redirect)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
@@ -205,3 +205,13 @@ VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 - Repository: https://github.com/yx0128/evergrow
 - Live demo: https://yx0128.github.io/evergrow/ (GitHub Pages, deployed by `.github/workflows/deploy.yml`)
 - Default branch: `main`.
+
+### 2026-11-17 — storage, redirect and favicon review
+
+- Storage guard now matches local/session storage, including bracket access, with
+  matcher tests.
+- The inline 404 script is tested against `redirectTarget` for repo paths and root.
+- Favicon is generated from `CONFIG` colours in dev and build; the static file is gone.
+- The planned-features note now sits above Features and Usage.
+
+Tests now total 31.
