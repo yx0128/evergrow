@@ -36,6 +36,11 @@ when there is none.
 | D028 | 2026-11-18 | Accepted | Item footprints are square (1×1, 2×2, …) | Rotation never changes the covered cells, so rotate needs no auto tiles or re-validation; `validateCatalog` enforces it. |
 | D029 | 2026-11-18 | Accepted | Clicking an item or any tile under it opens the item popover; the tile popover only opens for uncovered tiles | Tile type and height under an item are set from the item (§6.4). `getLevelRange` returns null under any item, and single-cell height edits under an item are a programming error. |
 
+| D030 | 2026-11-18 | Accepted | Coins and inventory change by deltas; undo/redo re-validate | Deltas keep external coin or inventory changes visible instead of snapping back to a stored value. Re-validating an inverse catches cases like selling undo after the refund was spent (`unaffordable`). |
+| D031 | 2026-11-18 | Accepted | Callers supply uids; `src/logic` has no randomness or clock | Commands stay pure and deterministic for tests and replay; the store or UI creates uids outside the logic layer. |
+| D032 | 2026-11-18 | Open | History size limit | Undo history is currently unbounded. A cap and its memory trade-off are deferred until save and long sessions are implemented. |
+| D033 | 2026-11-18 | Accepted | Every item can rotate; there is no `rotatable` flag | Player choice; square footprints (D028) mean rotation never changes the covered cells. Connectable arms follow same-item neighbours in world directions (D025), so rotating a connectable item turns only its post. Overrides BRIEF §6.1, §6.4 and §6.5. |
+
 ## Template
 
 ```md

@@ -21,7 +21,6 @@ const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): 
   defaultTile: 'grass',
   allowedTiles: ['grass', 'land'],
   connectable: false,
-  rotatable: false,
   model: `assets/models/${overrides.id}.glb`,
   thumb: `assets/thumbs/${overrides.id}.png`,
   emissive: false,
@@ -29,7 +28,7 @@ const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): 
 })
 
 const lamp = item({ id: 'lamp', footprint: [1, 1], allowedTiles: ['grass'] })
-const cottage = item({ id: 'cottage', footprint: [2, 2], rotatable: true })
+const cottage = item({ id: 'cottage', footprint: [2, 2] })
 const fence = item({
   id: 'fence',
   footprint: [1, 1],

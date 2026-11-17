@@ -10,6 +10,18 @@ import {
   setType,
 } from './cells'
 import type { CellMap } from './cells'
+import {
+  EMPTY_HISTORY,
+  apply,
+  canRedo,
+  canUndo,
+  execute,
+  redo,
+  undo,
+  validate,
+  type Command,
+  type WorldState,
+} from './commands'
 import { affectedByChange, getConnectionMask } from './connect'
 import { getFootprintCells, rotatedSize } from './footprint'
 import { isBuildable, landBounds, key } from './grid'
@@ -58,7 +70,6 @@ const item = (
   defaultTile: 'grass',
   allowedTiles: ['grass', 'land'],
   connectable: false,
-  rotatable: false,
   model: `assets/models/${overrides.id}.glb`,
   thumb: `assets/thumbs/${overrides.id}.png`,
   emissive: false,
@@ -80,6 +91,43 @@ function placement() {
   const cells = base()
   const occupancy = buildOccupancy(items, catalog)
   return { cells, occupancy, items, catalog }
+}
+
+function worldOf() {
+  const cells = base()
+  const state: WorldState = {
+    cells,
+    items,
+    occupancy: buildOccupancy(items, catalog),
+    inventory: new Map([['lamp', 1]]),
+    coins: 100,
+  }
+  return { state, catalog }
+}
+
+const placeLamp: Command = {
+  kind: 'place',
+  uid: 'c',
+  id: 'lamp',
+  x: 3,
+  z: 3,
+  rot: 0,
+  autoTile: 'grass',
+  source: 'shop',
+}
+
+function historyFixture() {
+  const world = worldOf()
+  const executed = execute(EMPTY_HISTORY, world.state, placeLamp, world.catalog)
+  if (!executed.ok) throw new Error(executed.reason)
+  return { history: executed.history, state: executed.state, catalog: world.catalog }
+}
+
+function redoFixture() {
+  const fixture = historyFixture()
+  const undone = undo(fixture.history, fixture.state, fixture.catalog)
+  if (!undone.ok) throw new Error(undone.reason)
+  return { history: undone.history, state: undone.state, catalog: fixture.catalog }
 }
 
 describe('logic purity', () => {
@@ -191,5 +239,50 @@ describe('logic purity', () => {
 
   it('affectedByChange returns a fresh list', () => {
     expect(affectedByChange(2, -3)).not.toBe(affectedByChange(2, -3))
+  })
+
+  it('command functions do not mutate the command, state or catalog', () => {
+    const commands: Command[] = [
+      placeLamp,
+      { kind: 'move', uid: 'b', x: 3, z: 3, rot: 0, autoTile: 'grass' },
+      { kind: 'rotate', uid: 'a' },
+      { kind: 'store', uid: 'b' },
+      { kind: 'sell', uid: 'b' },
+      { kind: 'paint', x: 2, z: 2, type: 'grass' },
+      { kind: 'changeItemTile', uid: 'a', type: 'land' },
+      { kind: 'setLevel', x: 2, z: 2, level: 2 },
+      { kind: 'setLevelItem', uid: 'a', level: 2 },
+      { kind: 'digUp', x: 1, z: 0 },
+    ]
+
+    for (const command of commands) {
+      expectDeepPure(() => ({ ...worldOf(), command }), (value) => {
+        const result = validate(value.command, value.state, value.catalog)
+        if (result.ok) apply(value.command, value.state, value.catalog)
+      })
+    }
+  })
+
+  it('execute does not mutate the history, state or catalog', () => {
+    expectDeepPure(() => ({ ...worldOf(), history: EMPTY_HISTORY }), (value) =>
+      execute(value.history, value.state, placeLamp, value.catalog),
+    )
+  })
+
+  it('undo does not mutate the history, state or catalog', () => {
+    expectDeepPure(historyFixture, (value) =>
+      undo(value.history, value.state, value.catalog),
+    )
+  })
+
+  it('redo does not mutate the history, state or catalog', () => {
+    expectDeepPure(redoFixture, (value) =>
+      redo(value.history, value.state, value.catalog),
+    )
+  })
+
+  it('canUndo and canRedo do not mutate the history', () => {
+    expectDeepPure(historyFixture, (value) => canUndo(value.history))
+    expectDeepPure(redoFixture, (value) => canRedo(value.history))
   })
 })

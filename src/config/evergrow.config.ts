@@ -137,7 +137,6 @@ export interface ItemDef {
   readonly defaultTile: TileType
   readonly allowedTiles: readonly TileType[]
   readonly connectable: boolean
-  readonly rotatable: boolean
   /** Relative public path, e.g. "assets/models/cottage.glb". */
   readonly model: string
   /** Relative public path, e.g. "assets/thumbs/cottage.png". */
@@ -156,6 +155,7 @@ export type InvalidReason =
   | 'minStack'
   | 'underItem'
   | 'unaffordable'
+  | 'notInInventory'
 
 export interface StringsConfig {
   readonly invalid: Readonly<Record<InvalidReason, string>>
@@ -337,6 +337,7 @@ export const CONFIG: EvergrowConfig = {
       minStack: 'Minimum height reached',
       underItem: 'Store or move the item first',
       unaffordable: 'Not enough coins',
+      notInInventory: 'Not in your inventory',
     },
   },
 

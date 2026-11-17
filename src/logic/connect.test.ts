@@ -11,7 +11,6 @@ const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): 
   defaultTile: 'grass',
   allowedTiles: ['grass', 'land'],
   connectable: false,
-  rotatable: false,
   model: `assets/models/${overrides.id}.glb`,
   thumb: `assets/thumbs/${overrides.id}.png`,
   emissive: false,

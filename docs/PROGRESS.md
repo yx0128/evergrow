@@ -6,10 +6,10 @@ Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
 ## Status
 
 Scaffold complete, plus pure world logic for grid coordinates, the buildable zone,
-tile cells, column levels, item footprints, placement validation, occupancy and
-connection masks. The typed config catalog exists and a full-window orthographic R3F
-canvas renders the day background. Logic is not wired to stores, rendering or
-commands yet.
+tile cells, column levels, item footprints, placement validation, occupancy,
+connection masks and undoable world commands. The typed config catalog exists and a
+full-window orthographic R3F canvas renders the day background. Logic is not wired to
+stores, rendering or UI yet.
 
 ## Workflow rules
 
@@ -199,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 137 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, purity, import guard)
+npm test         # 187 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -295,6 +295,35 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   non-connectable item and otherwise 4 bits: N=1, E=2, S=4, W=8. A bit is set when the
   orthogonal neighbour holds an item with the same id. A missing catalog entry throws.
 - `affectedByChange(x, z)` returns the cell itself then N, E, S, W (§6.5).
+
+### `src/logic/commands.ts`
+
+- `WorldState { cells, items, occupancy, inventory, coins }`. After every apply,
+  undo and redo, `occupancy` equals `buildOccupancy(items, catalog)`. Inventory
+  entries are deleted when their count reaches 0.
+- `Command` is plain data: `place`, `move`, `rotate`, `store`, `sell`, `paint`,
+  `changeItemTile`, `setLevel`, `setLevelItem` and `digUp`.
+- `validate(command, state, catalog)` returns `{ ok: true }` or
+  `{ ok: false, reason }`. Player rule failures are reasons; missing uids, duplicate
+  uids and unknown catalog ids throw. Coins never go negative. `paint` and `digUp`
+  return `outsideWorld` for non-integer or NaN coordinates before any lookup.
+- `apply(command, state, catalog)` returns `{ state, inverse }`. Cells and items are
+  restored exactly by the inverse; coins and inventory change by deltas (D030).
+  `place` and `move` create their auto tiles through `validatePlacement`, and `place`
+  undo removes only the tiles it created.
+- `History { past, future }` is immutable. `execute` validates, applies, pushes onto
+  `past` and clears `future`; failures leave both unchanged. `undo` and `redo`
+  re-validate first and return the failure reason unchanged (D030).
+  `canUndo` / `canRedo` inspect the stacks.
+- Callers supply uids; there is no randomness or clock in `src/logic` (D031).
+  History is unbounded (D032).
+- `place` from inventory spends one item (`notInInventory`) or from the shop spends
+  `price` (`unaffordable`) and goes straight into the world. `store` adds one item;
+  `sell` refunds the full price (D013). `rotate` increments `rot` for any existing
+  item (D033); place and move accept rot 0–3.
+- Tile settings under an item go through the item: `paint` requires an allowed type;
+  `digUp` returns `underItem`; single-cell `setLevel` throws and points at
+  `setLevelItem` (D029).
 
 ### `src/logic/importGuard.test.ts`
 
@@ -553,3 +582,48 @@ Verification:
   chunk-size warning only).
 - `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
   lines; no coverage exclusions.
+
+### 2026-11-18 — build: world commands with undo and redo
+
+Done:
+
+- Added `commands.ts` with `WorldState`, the ten world commands, `validate`,
+  `apply`, immutable `History`, `execute`, `undo`, `redo`, `canUndo` and `canRedo`.
+- Commands reuse placement, footprint, catalog and cell logic. `place` and `move`
+  create their auto tiles through `validatePlacement`; item tile and height edits use
+  the item paths (D029).
+- Inverse operations restore cells and items exactly and change coins and inventory
+  by deltas (D030). Undo and redo re-validate before applying.
+- Uids come from callers; `src/logic` has no randomness or clock (D031). History has
+  no size limit yet (D032).
+- Added `notInInventory` and `notRotatable` to `InvalidReason` and
+  `CONFIG.strings.invalid`.
+- Added `commands.test.ts` (success, invalid and round trips for every command) and
+  command/history purity tests.
+
+Verification:
+
+- `npm test` 137 → 185 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` is 100% statements, branches, functions and lines;
+  no coverage exclusions.
+
+### 2026-11-18 — fix: tile commands on bad coordinates and universal rotation
+
+Done:
+
+- `validate` for `paint` and `digUp` now returns `outsideWorld` for non-integer or NaN
+  coordinates before any item or occupancy lookup.
+- Removed `rotatable` from `ItemDef`, `notRotatable` from `InvalidReason` and
+  `CONFIG.strings.invalid`, and the connectable/rotatable catalog check. Every
+  existing item can rotate (D033); unknown uids still throw.
+- Added tests for invalid paint/digUp coordinates, fence rotation and round trips,
+  four rotations returning to rot 0, and placing the fence at rot 1.
+- Cleanups: getLevelRange comment, simpler digUp validation, DECISIONS spacing.
+
+Verification:
+
+- `npm test` 185 → 187 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` is 100% statements, branches, functions and lines;
+  no coverage exclusions.

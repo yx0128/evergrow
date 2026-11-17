@@ -143,6 +143,7 @@ export function getLevelRange(
   if (uid !== undefined) {
     const item = world.items.get(uid)
     if (!item) throw new Error(`Unknown item uid: ${uid}`)
+    // Called only to throw on a missing catalog entry; the result isn't needed.
     itemDefinition(catalog, item.id)
     return null
   }

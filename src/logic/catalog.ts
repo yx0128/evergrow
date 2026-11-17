@@ -32,9 +32,6 @@ export function validateCatalog(
     if (!item.allowedTiles.includes(item.defaultTile)) {
       errors.push(`default tile not allowed: ${item.id}`)
     }
-    if (item.connectable && item.rotatable) {
-      errors.push(`connectable item must not rotate: ${item.id}`)
-    }
   }
 
   for (const id of starterItems) {

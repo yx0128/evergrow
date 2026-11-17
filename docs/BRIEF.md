@@ -230,6 +230,7 @@ interface ItemDef {
 }
 interface PlacedItem { uid: string; id: string; x: number; z: number; rot: 0|1|2|3 }
 ```
+> Updated by D033: every item can rotate; `rotatable` was removed.
 
 ### 6.2 Drag-to-place flow
 1. Pointer down on a shop card or inventory item → `dragState` set in Zustand; Edit mode on.
@@ -269,6 +270,8 @@ All must pass:
 - Placing/removing a connectable item recomputes itself and its 4 neighbours.
 - Rotation disabled (`rotatable: false`).
 - Logic lives in `logic/connect.ts`, tested.
+
+> Updated by D033: every item can rotate; `rotatable` was removed.
 
 ---
 

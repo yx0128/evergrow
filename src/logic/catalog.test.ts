@@ -12,7 +12,6 @@ const validItem: ItemDef = {
   defaultTile: 'grass',
   allowedTiles: ['grass', 'land'],
   connectable: false,
-  rotatable: true,
   model: 'assets/models/cottage.glb',
   thumb: 'assets/thumbs/cottage.png',
   emissive: false,
@@ -65,12 +64,6 @@ describe('validateCatalog', () => {
     expect(
       validateCatalog([{ ...validItem, defaultTile: 'water' }], []),
     ).toContain('default tile not allowed: cottage')
-  })
-
-  it('rejects rotatable connectable items', () => {
-    expect(
-      validateCatalog([{ ...validItem, connectable: true, rotatable: true }], []),
-    ).toContain('connectable item must not rotate: cottage')
   })
 
   it('rejects unknown starter items', () => {
