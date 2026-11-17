@@ -1,3 +1,5 @@
+# Evergrow — Project Brief
+
 ## 1. Project
 **Name:** Evergrow
 A to-do list meets cozy world-building.
@@ -11,11 +13,9 @@ Big goals take a long time. When learning something new, building something from
 
 ### Design tone
 - Cozy, warm, calm, minimal.
-- No cheap or loud effects. No bounce, pop, shake, particles, confetti, sparkle or pulsing glow anywhere.
-- Motion is short, soft and purposeful (see §9).
 
 ### References
-Pocket Build, Garden Galaxy (3D cozy sandbox builders).
+Inspired by cozy 3D sandbox builders.
 
 ---
 
@@ -29,6 +29,9 @@ React Three Fiber (R3F)
 Vitest
 Blender + Python for asset creation (see §11)
 localStorage
+
+### Fonts
+Use the font files in `public/assets/fonts/` (title, heading and body fonts are set in config, §14).
 
 ### Setup
 ```bash
@@ -71,8 +74,10 @@ src/
     SettingsModal  HelpSheet  Tutorial  Toasts  ConfirmDialog  StartScreen
   assets/                        # loaders, thumbnail cache
 public/
-  models/*.glb
-  thumbs/*.png
+  assets/
+    models/*.glb
+    thumbs/*.png
+    fonts/
 assets-src/
   blender/*.py                   # one bpy script per asset + export_all.py
 ```
@@ -112,8 +117,8 @@ assets-src/
 
 ### 4.2 Focus sessions
 User picks between two modes:
-- Focus session: Timer, optional target time.`coinsPerBlock` per completed block (default 5 min). Minimum session length to earn (default 5 min).
-- Pomodoro: Focus/break cycles. Default 25 / 5, long break 15 every 4 cycles. All adjustable. | `coinsPerBlock` per completed focus block |
+- Focus session: Timer, optional target time. `coinsPerBlock` per completed block (default 5 min). Minimum session length to earn (default 5 min).
+- Pomodoro: Focus/break cycles. Default 25 / 5, long break 15 every 4 cycles. All adjustable. `coinsPerBlock` per completed focus block.
 
 - Optional link to a task. If linked to a task, show the task and its subtasks and checkboxes below the timer.
 - Controls: Pause, Resume, End. Pomodoro: Skip break.
@@ -135,6 +140,7 @@ User picks between two modes:
 - Item card: thumbnail, name, price, footprint icon (e.g. 2×2).
 - Unaffordable items: visible, greyed out, disabled. show "Need N more".
 - Bought item added to inventory. Can drag directly from shop card (buys on successful drop; cancelled drop = no charge).
+- Use placeholder shop cards until the item list is decided.
 
 ### 4.5 Inventory
 - Tray showing owned, unplaced items with counts.
@@ -229,8 +235,8 @@ interface ItemDef {
   allowedTiles: TileType[];
   connectable: boolean;       // fences, paths, hedges
   rotatable: boolean;         // false for connectable items
-  model: string;               // "/models/cottage.glb"
-  thumb: string;               // "/thumbs/cottage.png"
+  model: string;               // "assets/models/cottage.glb" (relative, no leading slash)
+  thumb: string;               // "assets/thumbs/cottage.png" (relative, no leading slash)
   emissive: boolean;          // has EMIT_ materials
   pointLight?: { color: string; intensity: number; distance: number }; // optional, capped
 }
@@ -327,7 +333,7 @@ Respect `prefers-reduced-motion`. Remove all transitions except camera moves (wh
 ## 10. Invalid / disabled feedback
 - Placing items or tiles: Red ghost + red footprint + reason in Placement HUD
 - Menu options, tile types: Greyed out, disabled
-- Sliders | Range limited to allowed values |
+- Sliders: Range limited to allowed values
 - Unaffordable shop items: Greyed out, disabled, "Need N more"
 - Blocked actions (e.g. undo complete): Disabled + reason
 
@@ -335,6 +341,7 @@ Respect `prefers-reduced-motion`. Remove all transitions except camera moves (wh
 
 ## 11. Assets
 
+### 11.1 Pipeline
 - Create assets in Blender via Python (`bpy`) scripts.
 - One script per asset in `assets-src/blender/`
 - `export_all.py` builds every asset and exports `.glb` to `public/assets/models/`.
@@ -405,76 +412,28 @@ Price tiers (guide): small plants 5–15 · larger plants/props 20–40 · build
 
 ## 14. Config file
 
-`src/config/evergrow.config.ts`
-fonts: {
-    title (only for app name)
-    heading
-    body
-}
-economy: {
-    taskReward
-    subtaskShare
-    sellRefund
-    tileCost
-    allowNegativeCoins
-},
-  focus: {
-    free:     { coinsPerBlock, blockMinutes, minMinutes },
-    pomodoro: { focusMin, shortBreakMin, longBreakMin,
-                cyclesBeforeLong, coinsPerBlock },
-  },
-  world: {
-    maxSize
-    startZone
-    buildableRing
-    maxStack
-    tileThickness (static)
-    waterMaxStep
-    chunkSize
-    cameraBoundsMargin
-  },
-  camera: {
-    minPolarDeg, maxPolarDeg,
-    minZoom, maxZoom,
-    snapRotateDeg,
-    transitionMs,
-    panSpeed, rotateSpeed, zoomSpeed,
-  },
-  motion: {
-    dropFadeMs, digUpFadeMs, tileAddFadeMs,
-    coinCountUpMs, gridFadeMs, panelMs,
-    ghostLerpMs, ghostOpacity,
-  },
-  dayNight: {
-    useLocalTime,
-    keyframes: { dawn, day, dusk, night },
-  },
-  rendering: {
-    shadowMapSize
-    maxPointLights
-    pixelRatioCap
-    quality: high or low,
-    bloom,
-  },
-  variation: { scale, hue },
-  ui: { toastMs, autosaveDebounceMs },
-  starter: { coins, items: [""] },
-  palette: { /* shared colours: background per time of day, valid/invalid tint, UI */ },
-  tiles: {
-    grass: { name: "Grass" },
-    land:  { name: "Land" },
-    water: { name: "Water", transparent },
-  },
-  items: [ name, category, footprint, allowedTiles, price ],
-  strings: { invalid: { /* reason strings */ } },
-  saveSchemaVersion: 1,
-};
-```
+All tunable values live in `src/config/evergrow.config.ts`. This is the list of settings it holds; the exact names and values are defined in the code.
+
+- **fonts:** title (app name only), heading, body
+- **economy:** taskReward, subtaskShare, tileCost, allowNegativeCoins
+- **focus**
+  - free: coinsPerBlock, blockMinutes, minMinutes
+  - pomodoro: focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, coinsPerBlock
+- **world:** maxSize, startZone, buildableRing, maxStack, tileThickness (fixed), waterMaxStep, chunkSize, cameraBoundsMargin
+- **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
+- **motion:** dropFadeMs, digUpFadeMs, tileAddFadeMs, coinCountUpMs, gridFadeMs, panelMs, ghostLerpMs, ghostOpacity
+- **dayNight:** useLocalTime, keyframes (dawn, day, dusk, night)
+- **rendering:** shadowMapSize, maxPointLights, pixelRatioCap, quality (high or low), bloom
+- **variation:** scale, hue
+- **ui:** toastMs, autosaveDebounceMs
+- **starter:** coins, items
+- **palette:** shared colours (background per time of day, valid/invalid tint, UI)
+- **tiles:** grass ("Grass"), land ("Land"), water ("Water", transparent)
+- **items:** the item catalog (name, category, footprint, allowedTiles, price; see §6.1)
+- **strings:** invalid-reason messages
+- **saveSchemaVersion:** 1
 
 ---
-
-Use the fonts in /public/assets/fonts.
-Use shop card placeholders until item list is decided.
 
 ## Out of scope
 
