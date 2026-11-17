@@ -121,7 +121,7 @@ Growth happens little by little, one small step at a time. Evergrow's goal is to
 | Command | What it does |
 |---|---|
 | `npm run build` | Builds the app for production into `dist/` |
-| `npm run preview` | Serves the production build locally |
+| `npm run preview` | Serves the production build at http://localhost:4173/evergrow/ |
 | `npm test` | Runs the test suite |
 
 ### Configuration

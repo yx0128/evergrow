@@ -182,7 +182,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 31 tests (config, catalog, assets, UI, redirect)
+npm test         # 32 tests (config, catalog, assets, UI, redirect)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
@@ -225,3 +225,12 @@ Tests now total 31.
 - Decisions D013/D014 record the refund and tile rules.
 
 Tests remain 31.
+
+### 2026-11-17 — favicon, storage and preview review
+
+- Dev favicon is served under the configured base (`/evergrow/favicon.svg` with
+  `VITE_BASE_PATH=/evergrow/`); plain dev still serves `/favicon.svg`.
+- Storage guard strips line and block comments before matching, with matcher tests.
+- README documents the preview URL `http://localhost:4173/evergrow/`.
+
+Tests now total 32.
