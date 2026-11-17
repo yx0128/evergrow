@@ -21,6 +21,7 @@ rendering or commands yet.
 - Push main once per task, after the merge. GitHub Pages deploys every push to main.
 - Record build, fix and docs sessions in docs/STATE.md. Don't record review sessions.
 - Each session prompt names its type (BUILD, FIX, DOCS or REVIEW). Review sessions report only and change no code or docs.
+- Dependabot PRs: batch them into one fix/ branch instead of merging each one.
 
 ## Log
 
@@ -187,8 +188,9 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 
 - Builds use `base: "/<repo>/"` (derived from `GITHUB_REPOSITORY`, overridable with
   `VITE_BASE_PATH`). Local dev always uses `/`.
-- Order: checkout → Node 22 → `npm ci` → `npm test` → `npm run build` → upload
-  `dist/` → deploy. A test failure stops the deploy.
+- Order: checkout → Node 26 (`.nvmrc`) → `npm ci` → `npm run lint` → `npm test` →
+  `npm run build` → upload `dist/` → deploy. A lint or test failure stops the deploy.
+- Pull requests run lint, tests and build through `.github/workflows/ci.yml`.
 - `public/404.html` redirects unknown paths back to the project root while preserving
   the query string and hash for future SPA routes.
 - Live URL: https://yx0128.github.io/evergrow/
@@ -203,6 +205,9 @@ npm run coverage   # line/branch coverage; HTML report in coverage/index.html
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
 VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 ```
+
+CI runs `npm run lint`, `npm test` and `npm run build` on every pull request
+(`.github/workflows/ci.yml`) and again before every Pages deploy.
 
 ## World logic (grid & cells)
 
@@ -286,7 +291,7 @@ were explicitly out of scope here.
 - `CHANGELOG.md` (Keep a Changelog), `docs/RELEASING.md`
 - `docs/DECISIONS.md`, `docs/STATE.md`, `docs/ARCHITECTURE.md`
 - `.github/ISSUE_TEMPLATE/`, `PULL_REQUEST_TEMPLATE.md`, `dependabot.yml`
-- `.editorconfig`, `.nvmrc` (Node 22, matches CI)
+- `.editorconfig`, `.nvmrc` (Node 26, matches CI)
 
 ## Git / auth notes
 
@@ -409,3 +414,26 @@ Tests remain 33.
   (`catalog.ts`, `cells.ts`, `grid.ts`). Overall: 100% statements/lines,
   98.95% branches; the only uncovered branch is `src/assets/redirect.ts` line 3.
 - No game code changed; 88 tests still pass.
+
+### 2026-11-18 — fix: GitHub Actions and Node 26
+
+Replaces the six Dependabot PRs.
+
+- actions/checkout v4 → v7. v7 is ESM; it restricts unsafe fork checkouts for
+  `pull_request_target`/`workflow_run`. This repo uses only `push` and
+  `pull_request`, so no config change was needed.
+- actions/setup-node v4 → v7. ESM and new cache outputs; `node-version-file` and
+  `cache: npm` still work unchanged.
+- actions/configure-pages v5 → v6. Runtime moved to Node 24; no inputs changed.
+- actions/upload-pages-artifact v3 → v5. Bumps its internal upload-artifact to v7
+  and adds `include-hidden-files` (dotfiles stay excluded by default). `path: dist`
+  is unchanged; `dist/` has no required dotfiles.
+- actions/deploy-pages v4 → v5. Runtime moved to Node 24. It still consumes the
+  `github-pages` artifact, which upload-pages-artifact v5 still produces under the
+  same name and format, so the pair is compatible with no config changes.
+- Node 26 everywhere: `.nvmrc` is now the single source (`node-version-file`),
+  CI moved off Node 22, and `@types/node` went from 24.19.2 to 26.6.6.
+- Added `.github/workflows/ci.yml` (pull_request: checkout, setup-node, `npm ci`,
+  lint, test, build; `contents: read`). Deploy now runs lint too.
+- `npm ci`, `npm run lint`, `npm test` (88) and `npm run build` pass locally on
+  Node v26.13.1 (build still shows the existing chunk-size warning).

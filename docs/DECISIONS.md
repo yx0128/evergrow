@@ -28,6 +28,7 @@ when there is none.
 | D020 | 2026-11-17 | Accepted | Add the `minStack` invalid reason ("Minimum height reached") | A level below 1, NaN or a non-integer is outside §5.2's 1..`maxStack` range and needs a distinct message; reusing `maxStack` would tell the user the opposite. Levels above `maxStack` return `maxStack`; `+Infinity` is treated as above max, `−Infinity` as below min, and NaN/non-integers return `minStack`. |
 | D021 | 2026-11-18 | Accepted | Work on step/fix/docs branches and squash-merge into main after review | Keeps main reviewed and deployable (Pages deploys every push to main). Broken intermediate commits stay on the branch. No history rewriting on main. Rules live in PROGRESS.md "Workflow rules". |
 | D022 | 2026-11-18 | Accepted | Use @vitest/coverage-v8 as a review aid, with no threshold yet | Shows untested branches in pure logic; a threshold now would reward tests written to hit a number. Consider a src/logic-only threshold later. |
+| D023 | 2026-11-18 | Accepted | Node 26 (LTS) for local, CI and @types/node; .nvmrc is the single source | Local was already on 26 and CI on 22; one version avoids type and runtime mismatches. Node 26 entered LTS in October 2026. |
 
 ## Template
 
