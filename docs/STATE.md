@@ -10,16 +10,14 @@ excluded. These are snapshot values and will not update themselves.
 - **Model:** `deepseek-v4.1-flash` (provider `opencode-go`)
 - **Repository:** https://github.com/yx0128/evergrow
 
-## Session
+## Sessions
 
-| Session | Duration | Input | Output | Reasoning | Cache read | Non-cache total | Cost |
-|---|---|---|---|---|---|---|---|
-| Scaffold session | 1h 38m 54s | 138,056 | 23,224 | 20,145 | 4,351,232 | 181,425 | $0.059783 |
+| Session | Request | Duration | Input | Output | Reasoning | Cache read | Non-cache total | Cost | Tests (passed/total) | Files changes | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| build | Scaffold + config | 1h 3m 14s | 659,049 | 31,148 | 28,882 | 8,228,224 | 719,079 | $0.159560 | 15/15 | Scaffold, typed config and tests, asset/storage helpers, Pages CI and 404, background, repo setup | Active time only; wall-clock span was 11h 55m with 10h 52m idle. Snapshot values. |
+| build | Docs setup | 0h 18m 29s | 45,239 | 12,080 | 9,136 | 5,491,072 | 66,455 | $0.035989 | 15/15 | LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, ARCHITECTURE, RELEASING, DECISIONS, PROGRESS, STATE, GitHub templates, doc links | Active time only; wall-clock span was 0h 46m with 0h 28m idle. |
 
-Total consumption including cache-read tokens: **4,532,657 tokens**.
-
-Duration is wall-clock from session creation to the last recorded update, so it
-includes time between messages. The game is still at the scaffold stage.
+Non-cache total: **785,534** tokens. Cache-read total: **13,719,296**. All tokens: **14,504,830**.
 
 ## How to refresh
 

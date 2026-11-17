@@ -8,6 +8,34 @@ Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
 Scaffold complete. Vite + React + TypeScript is installed, the typed config catalog
 exists, and a full-window R3F canvas renders the day background. No game features yet.
 
+## Log
+
+### 2026-11-17
+
+Done:
+
+- Scaffolded Vite + React + TypeScript with strict mode, npm scripts and folder layout.
+- Added the fully typed config catalog, 15 tests, lint and build.
+- Rendered a full-window orthographic canvas using the day background `#d7e0e9`.
+- Set the starter item and item catalog to pending (`items: []`).
+- Initialized the GitHub repo and automatic GitHub Pages deployment.
+- Added base-aware `assetUrl()` and namespaced `storageKey()` helpers plus `404.html`.
+- Added release/community docs: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY,
+  CHANGELOG, ARCHITECTURE, RELEASING, DECISIONS, STATE, and this progress log.
+- Made `BRIEF.md` tracked and reorganised docs.
+
+Known issues / not done:
+
+- No game features: tasks, economy, focus, shop, inventory, world, tiles, placement,
+  camera, day/night, audio, tutorial and save system are unimplemented.
+- Item catalog, starter item, fonts and 3D assets are undecided/missing.
+- Build reports a non-fatal chunk-size warning from Three.js.
+- GitHub Actions runs Node 20, which is deprecated on runners.
+- `404.html` derives the project root from the first URL segment; custom domains
+  would need a different redirect.
+- README screenshot and several community/legal placeholders still need filling.
+- `npm run dev` is the only verified runtime; no browser automation or visual tests.
+
 ## Reproduce from scratch
 
 ```bash
