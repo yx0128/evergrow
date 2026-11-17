@@ -22,4 +22,14 @@ describe('storage guard', () => {
       }),
     ).toEqual(['direct.ts', 'bracket.ts', 'session.ts'])
   })
+
+  it('ignores mentions inside comments', () => {
+    expect(
+      findStorageAccess({
+        'line.ts': '// localStorage.setItem("k", "v")',
+        'block.ts': '/* sessionStorage.getItem("k") */',
+        'after.ts': '// note\nlocalStorage.setItem("k", "v")',
+      }),
+    ).toEqual(['after.ts'])
+  })
 })
