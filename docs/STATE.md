@@ -16,10 +16,10 @@ excluded. These are snapshot values and will not update themselves.
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | build | Scaffold + config | 1h 3m 14s | 659,049 | 31,148 | 28,882 | 8,228,224 | 719,079 | $0.159560 | 15/15 | Scaffold, typed config and tests, asset/storage helpers, Pages CI and 404, background, repo setup | Active time only; wall-clock span was 11h 55m with 10h 52m idle. Snapshot values. |
 | build | Docs setup | 0h 18m 29s | 45,239 | 12,080 | 9,136 | 5,491,072 | 66,455 | $0.035989 | 15/15 | LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY, CHANGELOG, ARCHITECTURE, RELEASING, DECISIONS, PROGRESS, STATE, GitHub templates, doc links | Active time only; wall-clock span was 0h 46m with 0h 28m idle. |
-| review | Review: scaffold + config | ~3m (est.) | n/a | n/a | n/a | n/a | n/a | n/a | 15/15 | None (read-only review of 668549a) | Claude Code, claude-opus-5-5. Verdict: NOT READY — export is not named CONFIG; PROGRESS/D001 say the canvas is orthographic but it uses the default perspective camera; config tests are weaker than the brief's values; session.json is untracked and not gitignored. Token, cost and duration figures are not available from inside the session. |
 | fix | Review fixes: readonly CONFIG, camera/strings config, catalog validation, UI tests | 0h 4m 4s | 21,178 | 5,517 | 10,059 | 2,946,688 | 36,754 | $0.021362 | 25/25 | Config typing, camera and strings, catalog validator/tests, App UI tests, 404 title, docs | OpenCode, deepseek-v4.1-flash. Active estimate excludes idle gaps over 10 min; snapshot values. |
+| fix | Minor review fixes: fallback fill, canvas background test, log/404 text | 0h 2m 28s | 6,174 | 2,060 | 1,836 | 1,292,672 | 10,070 | $0.007142 | 25/25 | Fallback layout, App/config tests, PROGRESS log, 404 link | OpenCode, deepseek-v4.1-flash. Active estimate excludes idle gaps over 10 min; snapshot values. |
 
-Non-cache total: **822,288** tokens. Cache-read total: **16,665,984**. All tokens: **17,488,272**.
+Non-cache total: **832,358** tokens. Cache-read total: **17,958,656**. All tokens: **18,791,014**.
 
 ## How to refresh
 

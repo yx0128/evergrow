@@ -51,6 +51,31 @@ Done:
 Known issues: item catalog, fonts and game systems are still pending; the build still
 reports a chunk-size warning; no browser or visual tests yet.
 
+### 2026-11-17 — scaffold review
+
+Reviewed 668549a, then the fixes in f7d69e2..3beca47 and 8f6c0e8..303a29b.
+Verdict: **ready for the next step.** The scaffold acceptance criteria are met:
+full-window canvas in the day colour, build with no type errors, 25/25 tests, and a
+fully typed, readonly `CONFIG`. Each fix commit passes tests, typecheck and lint.
+
+Done in the final round:
+
+- WebGL fallback now fills the window.
+- App test checks the drawn `<color>` background, not just the canvas style.
+- Config type test no longer depends on the `quality` value.
+- Empty-catalog length checks removed; `validateCatalog` still checks `CONFIG`.
+- Original progress entry and 404 link text restored.
+
+Carried forward:
+
+- `src/App.test.tsx` assumes the canvas has a single child (`<color>`).
+  **Do:** find the `color` element among the canvas children instead of casting the
+  only child. **When:** in the first step that adds anything inside `<Canvas>`
+  (lights, world, camera rig).
+- Console shows a `THREE.Clock` deprecation warning from `@react-three/fiber`, not
+  from project code. **Do:** nothing in project code; check that it's gone after
+  upgrading `@react-three/fiber`. **When:** at the next dependency update.
+
 ## Reproduce from scratch
 
 ```bash
