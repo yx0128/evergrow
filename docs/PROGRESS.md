@@ -248,3 +248,8 @@ Tests now total 33.
 - No push, tag or deploy performed.
 
 Tests remain 33.
+
+### 2026-11-17 — v0.1.0 released
+
+- Tagged v0.1.0 and pushed; GitHub Pages deployed it.
+- Next milestone: 0.2.0 (world logic).
