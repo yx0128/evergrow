@@ -17,6 +17,7 @@ when there is none.
 | D009 | 2026-11-17 | Accepted | Requirements live in `docs/BRIEF.md` | The brief had been gitignored; it is now tracked and replaces the removed SPEC. |
 | D010 | 2026-11-17 | Accepted | Default focus and Pomodoro lengths | Brief sets 25/5/15 minutes, a long break every 4 cycles and 5-minute focus blocks. |
 | D011 | 2026-11-17 | Accepted | UI tests use jsdom + Testing Library | The project had no DOM test stack; this verifies the canvas background and WebGL fallback without a real browser. |
+| D012 | 2026-11-17 | Accepted | Node 22 in CI and `.nvmrc` | Node 20 is deprecated on GitHub Actions runners; 22 is supported and satisfies Vite's requirement. |
 
 ## Template
 
