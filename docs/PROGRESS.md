@@ -241,3 +241,10 @@ Tests now total 32.
   URLs no longer hide storage access later on the same line.
 
 Tests now total 33.
+
+### 2026-11-17 — v0.1.0 release prep
+
+- Finalised `CHANGELOG.md` for v0.1.0 and confirmed `package.json` at 0.1.0.
+- No push, tag or deploy performed.
+
+Tests remain 33.
