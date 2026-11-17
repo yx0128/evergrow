@@ -15,7 +15,7 @@ exists, and a full-window orthographic R3F canvas renders the day background. No
 Done:
 
 - Scaffolded Vite + React + TypeScript with strict mode, npm scripts and folder layout.
-- Added the fully typed config catalog, 25 tests, lint and build.
+- Added the fully typed config catalog, 15 tests, lint and build.
 - Rendered a full-window orthographic canvas using the day background `#d7e0e9`.
 - Set the starter item and item catalog to pending (`items: []`).
 - Initialized the GitHub repo and automatic GitHub Pages deployment.
@@ -46,7 +46,7 @@ Done:
 - Stopped applying missing font families; set Node 22 in `.nvmrc` and CI.
 - Ignored `session.json` and removed machine-specific session details from STATE.
 - Re-review fixes: readonly typed `CONFIG`, config-driven camera/strings, catalog
-  validator, UI tests, 404 title, and Node 22.
+  validator, UI tests, 404 title, and Node 22. Tests now total 25.
 
 Known issues: item catalog, fonts and game systems are still pending; the build still
 reports a chunk-size warning; no browser or visual tests yet.
