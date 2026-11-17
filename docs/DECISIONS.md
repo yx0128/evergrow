@@ -18,6 +18,10 @@ when there is none.
 | D010 | 2026-11-17 | Accepted | Default focus and Pomodoro lengths | Brief sets 25/5/15 minutes, a long break every 4 cycles and 5-minute focus blocks. |
 | D011 | 2026-11-17 | Accepted | UI tests use jsdom + Testing Library | The project had no DOM test stack; this verifies the canvas background and WebGL fallback without a real browser. |
 | D012 | 2026-11-17 | Accepted | Node 22 in CI and `.nvmrc` | Node 20 is deprecated on GitHub Actions runners; 22 is supported and satisfies Vite's requirement. |
+| D013 | 2026-11-17 | Accepted | Selling always refunds 100%; no refund setting | A full refund is fixed design, so a config value adds nothing. |
+| D014 | 2026-11-17 | Accepted | No water/neighbour tile rules; every cell's height range is 1 to `maxStack` | Removes the fiddliest logic and blocked states for the demo; opaque water sides make raised water look intentional. Can be added later without breaking saves. |
+| D015 | 2026-11-17 | Accepted | Keep `allowedTiles` per item | Cheap check that prevents odd placements (e.g. a campfire on water) and drives `Tab` cycling and greyed-out tile options. |
+| D016 | 2026-11-17 | Accepted | Brief names no specific games as references | A generic "cozy 3D sandbox builders" description keeps the style direction without tying it to particular titles. |
 
 ## Template
 

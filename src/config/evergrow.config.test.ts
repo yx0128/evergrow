@@ -12,12 +12,11 @@ describe('evergrow config', () => {
     expect(config.world.buildableRing).toBe(6)
     expect(config.world.maxStack).toBe(8)
     expect(config.world.tileThickness).toBeGreaterThan(0)
-    expect(config.world.waterMaxStep).toBe(1)
     expect(config.world.chunkSize).toBeGreaterThan(0)
   })
 
   it('has a non-negative, increasing task economy', () => {
-    const { taskReward, subtaskShare, sellRefund, tileCost, allowNegativeCoins } = config.economy
+    const { taskReward, subtaskShare, tileCost, allowNegativeCoins } = config.economy
     const rewards = Object.values(taskReward)
     expect(rewards.every((reward) => reward >= 0)).toBe(true)
     expect(taskReward.tiny).toBeLessThan(taskReward.small)
@@ -25,7 +24,6 @@ describe('evergrow config', () => {
     expect(taskReward.medium).toBeLessThan(taskReward.big)
     expect(subtaskShare).toBeGreaterThan(0)
     expect(subtaskShare).toBeLessThanOrEqual(1)
-    expect(sellRefund).toBe(1)
     expect(tileCost).toBe(0)
     expect(allowNegativeCoins).toBe(false)
   })

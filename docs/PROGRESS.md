@@ -215,3 +215,13 @@ VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 - The planned-features note now sits above Features and Usage.
 
 Tests now total 31.
+
+### 2026-11-17 — water and refund config cleanup
+
+- Removed the water height-step setting, the water invalid reason and the refund
+  setting. Water is a tile style with no neighbour rules; selling always refunds the
+  item price.
+- Updated the README water description.
+- Decisions D013/D014 record the refund and tile rules.
+
+Tests remain 31.

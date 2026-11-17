@@ -18,8 +18,6 @@ export interface EconomyConfig {
   readonly taskReward: Readonly<Record<TaskSize, number>>
   /** Fraction of the parent reward shared across subtasks; each subtask is paid when completed. */
   readonly subtaskShare: number
-  /** Fraction of the item price refunded when selling. 1 = full refund. */
-  readonly sellRefund: number
   readonly tileCost: number
   readonly allowNegativeCoins: boolean
 }
@@ -45,7 +43,6 @@ export interface WorldConfig {
   readonly buildableRing: number
   readonly maxStack: number
   readonly tileThickness: number
-  readonly waterMaxStep: number
   readonly chunkSize: number
   readonly cameraBoundsMargin: number
 }
@@ -155,7 +152,6 @@ export type InvalidReason =
   | 'occupied'
   | 'wrongTile'
   | 'unevenGround'
-  | 'waterRule'
   | 'maxStack'
   | 'underItem'
   | 'unaffordable'
@@ -207,7 +203,6 @@ export const CONFIG: EvergrowConfig = {
       big: 30,
     },
     subtaskShare: 0.6,
-    sellRefund: 1,
     tileCost: 0,
     allowNegativeCoins: false,
   },
@@ -233,7 +228,6 @@ export const CONFIG: EvergrowConfig = {
     buildableRing: 6,
     maxStack: 8,
     tileThickness: 1,
-    waterMaxStep: 1,
     chunkSize: 16,
     cameraBoundsMargin: 4,
   },
@@ -338,7 +332,6 @@ export const CONFIG: EvergrowConfig = {
       occupied: 'Something is already here',
       wrongTile: "This item can't go on that tile",
       unevenGround: 'Uneven ground',
-      waterRule: 'Water levels would not match',
       maxStack: 'Maximum height reached',
       underItem: 'Store or move the item first',
       unaffordable: 'Not enough coins',

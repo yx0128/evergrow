@@ -24,6 +24,7 @@
 - [Mission](#mission)
 - [Built with](#built-with)
 - [Getting started](#getting-started)
+- [Deployment](#deployment)
 - [Usage](#usage)
 - [Roadmap](#roadmap)
 - [Contributing](#contributing)
@@ -61,6 +62,8 @@ Evergrow turns your progress into a cozy little world. Every task you complete e
 - Start with an empty space and build it any way you like.
 - Place items from the shop or your inventory into the world.
 - Your buildable space grows as you build outwards.
+- Shape your land with grass, land and water tiles. Water is a styled block, not liquid.
+- Changed your mind? Store items back in your inventory or sell them for a full refund.
 - Orbit the world 360°, tilt, zoom and pan with the mouse or keyboard.
 - Lighting follows your local time, from warm mornings to quiet nights.
 
@@ -179,7 +182,7 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 
 ## Acknowledgements
 
-- Inspired by cozy builders such as Pocket Build and Garden Galaxy.
+- Inspired by cozy 3D sandbox builders.
 - [pmndrs](https://github.com/pmndrs) for React Three Fiber, drei and Zustand.
 - [Three.js](https://threejs.org/) and [Blender](https://www.blender.org/) communities.
 - Audio credits
