@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { findStorageAccess } from './storageGuard'
 
 const modules = import.meta.glob('/src/**/*.{ts,tsx}', {
   query: '?raw',
@@ -6,16 +7,19 @@ const modules = import.meta.glob('/src/**/*.{ts,tsx}', {
   eager: true,
 }) as Record<string, string>
 
-const ALLOWED = new Set(['assets/assetUrl.ts'])
-
 describe('storage guard', () => {
   it('accesses localStorage only through the storage helper', () => {
-    const offenders = Object.entries(modules).filter(([path, content]) => {
-      const relative = path.replace(/^\/?src\//, '')
-      if (relative.endsWith('.test.ts') || relative.endsWith('.test.tsx')) return false
-      if (ALLOWED.has(relative)) return false
-      return content.includes('localStorage.')
-    })
-    expect(offenders).toEqual([])
+    expect(findStorageAccess(modules)).toEqual([])
+  })
+
+  it('flags direct, bracket and session storage access', () => {
+    expect(
+      findStorageAccess({
+        'direct.ts': 'localStorage.setItem("k", "v")',
+        'bracket.ts': 'window["localStorage"].getItem("k")',
+        'session.ts': 'sessionStorage.setItem("k", "v")',
+        'safe.ts': 'const key = storageKey("save")',
+      }),
+    ).toEqual(['direct.ts', 'bracket.ts', 'session.ts'])
   })
 })
