@@ -12,10 +12,11 @@ when there is none.
 | D004 | 2026-11-17 | Accepted | Relative asset paths | GitHub Pages serves the app from a subpath, so absolute `/assets` URLs would break. |
 | D005 | 2026-11-17 | Accepted | Namespaced storage | All `*.github.io` project sites share one origin, so keys need a project prefix. |
 | D006 | 2026-11-17 | Accepted | GitHub Pages deployment | Static hosting is free and sufficient for a local-only demo; tests gate deploys. |
-| D007 | 2026-11-17 | Open | Font families and files | |
+| D007 | 2026-11-17 | Open | Font families and files | Font files are not present; configured names are placeholders. |
 | D008 | 2026-11-17 | Accepted | Day background | Requested blue matching the saturation and lightness of the original warm tone. |
 | D009 | 2026-11-17 | Accepted | Requirements live in `docs/BRIEF.md` | The brief had been gitignored; it is now tracked and replaces the removed SPEC. |
-| D010 | 2026-11-17 | Open | Default focus and Pomodoro lengths | |
+| D010 | 2026-11-17 | Accepted | Default focus and Pomodoro lengths | Brief sets 25/5/15 minutes, a long break every 4 cycles and 5-minute focus blocks. |
+| D011 | 2026-11-17 | Accepted | UI tests use jsdom + Testing Library | The project had no DOM test stack; this verifies the canvas background and WebGL fallback without a real browser. |
 
 ## Template
 
