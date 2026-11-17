@@ -48,7 +48,7 @@ export default defineConfig(({ command, isPreview }) => ({
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],
-      exclude: ['src/**/*.test.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/main.tsx'],
       reporter: ['text', 'html'],
     },
   },

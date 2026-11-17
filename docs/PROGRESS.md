@@ -6,9 +6,10 @@ Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
 ## Status
 
 Scaffold complete, plus pure world logic for grid coordinates, the buildable zone,
-tile cells and column levels. The typed config catalog exists and a full-window
-orthographic R3F canvas renders the day background. Logic is not wired to stores,
-rendering or commands yet.
+tile cells, column levels, item footprints, placement validation, occupancy and
+connection masks. The typed config catalog exists and a full-window orthographic R3F
+canvas renders the day background. Logic is not wired to stores, rendering or
+commands yet.
 
 ## Workflow rules
 
@@ -198,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 88 tests (config, catalog, assets, UI, redirect, grid, cells, purity, import guard)
+npm test         # 138 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -212,6 +213,13 @@ CI runs `npm run lint`, `npm test` and `npm run build` on every pull request
 ## World logic (grid & cells)
 
 Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
+
+### `src/logic/catalog.ts`
+
+- `validateCatalog(items, starterItems)` returns human-readable errors (empty = valid).
+- `itemDefinition(catalog, id)` returns the `ItemDef` and throws
+  `Unknown item id: <id>` for a missing entry. Placement, connection and level logic
+  all use this lookup; `cells.ts` does not define or re-export it.
 
 ### `src/logic/grid.ts`
 
@@ -249,9 +257,44 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 - `digUp(cells, x, z)`: invalid or out-of-world coordinates → `outsideWorld` before
   any lookup; level > 1 → level − 1; level 1 → remove; empty in-world cell →
   unchanged (`{ ok: true, cells }`).
-- `getLevelRange(x, z, cells)` → `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }`;
-  `x/z/cells` are reserved for item-on-top limits (§6.4).
+- `getLevelRange(x, z, world, catalog)` → `LevelRange | null`, where
+  `world = { cells, occupancy, items }` and all parameters are required. It returns
+  `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }` for bare tiles and 1×1 items, and
+  `null` under a multi-cell item (slider disabled, edit from the item, D026). An
+  occupancy uid with no item, or an item id missing from the catalog, throws.
 - Nothing is clamped and no input map is ever mutated.
+
+### `src/logic/footprint.ts`
+
+- Re-exports `Rotation = 0 | 1 | 2 | 3`; each step is 90° clockwise seen from above
+  (+X east, +Z south, D017).
+- Anchor convention: `(x, z)` is the footprint's min-x/min-z corner after rotation
+  (D024). `getFootprintCells` covers `x..x+w'-1`, `z..z+d'-1`.
+- `rotatedSize(item, rot)` → `[w, d]`; a `w×d` footprint becomes `d×w` at rot 1 and 3.
+- `getFootprintCells(item, x, z, rot)` → `GridPoint[]` in row order (z, then x).
+
+### `src/logic/placement.ts`
+
+- `PlacedItem { uid, id, x, z, rot }` (§6.1),
+  `PlacedItems = ReadonlyMap<uid, PlacedItem>` (D027),
+  `Occupancy = ReadonlyMap<cellKey, uid>`, `PlacementState = { cells, occupancy }`,
+  and `PlacementResult = { ok: true; autoTiles: Cell[] } | { ok: false; reason }`.
+- `buildOccupancy(items, catalog)` maps every rotated footprint cell to its uid and
+  throws on an item id missing from the catalog. `itemAt(x, z, occupancy, items)`
+  returns the covering item or `undefined`. Both read the item map directly by uid.
+- `validatePlacement(item, x, z, rot, autoTile, state, ignoreUid?)` checks §6.3 in
+  order: `outsideWorld`, `outsideBuildableZone`, `occupied`, `wrongTile`,
+  `unevenGround`; the first failure wins. Empty cells count as level 1. `ignoreUid`
+  accepts a moving item's own cells. On success `autoTiles` has one level-1 cell of
+  `autoTile` for each empty footprint cell, in footprint order.
+
+### `src/logic/connect.ts`
+
+- Connectable items are 1×1 (D025); placement validation is unchanged.
+- `getConnectionMask(uid, items, occupancy, catalog)` returns 0 for a missing or
+  non-connectable item and otherwise 4 bits: N=1, E=2, S=4, W=8. A bit is set when the
+  orthogonal neighbour holds an item with the same id. A missing catalog entry throws.
+- `affectedByChange(x, z)` returns the cell itself then N, E, S, W (§6.5).
 
 ### `src/logic/importGuard.test.ts`
 
@@ -262,10 +305,11 @@ It was verified by temporarily adding a `three` import and watching the test fai
 
 ### `src/logic/purity.test.ts`
 
-Calls every exported map function (`setCell`, `removeCell`, `setLevel`, `setType`,
-`paint`, `digUp`, `isBuildable`, `landBounds`, `getLevelRange`), snapshotting the
-input with `structuredClone([...map])` and asserting the input is deep-equal and
-the same size afterwards.
+Calls every exported map function and pure helper (`setCell`, `removeCell`,
+`setLevel`, `setType`, `paint`, `digUp`, `isBuildable`, `landBounds`, `getLevelRange`,
+`rotatedSize`, `getFootprintCells`, `buildOccupancy`, `itemAt`, `validatePlacement`,
+`getConnectionMask`), snapshotting inputs with `structuredClone` and asserting they
+are deep-equal afterwards.
 
 ### Reproduce this step
 
@@ -280,9 +324,9 @@ the same size afterwards.
    range; input purity; no rendering/store imports.
 4. `npm test` (88), `npm run build`, `npm run lint`.
 
-Still to do next: item checks (dig up under an item, `allowedTiles`), footprints,
-placement, commands, world store and rendering. Items, stores, commands and rendering
-were explicitly out of scope here.
+Still to do next: item checks for tile tools (dig up under an item, `allowedTiles`),
+commands, world store and rendering. Footprints, placement validation and connection
+masks are now in `src/logic`; commands, stores and rendering remain out of scope.
 
 ## Release and community docs
 
@@ -437,3 +481,55 @@ Replaces the six Dependabot PRs.
   lint, test, build; `contents: read`). Deploy now runs lint too.
 - `npm ci`, `npm run lint`, `npm test` (88) and `npm run build` pass locally on
   Node v26.13.1 (build still shows the existing chunk-size warning).
+
+### 2026-11-18 — build: item footprints, placement and connections
+
+Done:
+
+- Added `footprint.ts` with the clockwise `Rotation` steps, the min-corner anchor
+  (D024), `rotatedSize` and row-ordered `getFootprintCells`.
+- Added `placement.ts`: `PlacedItem`, `Occupancy`, `buildOccupancy`, `itemAt` and
+  `validatePlacement` with the five §6.3 reasons in order, `ignoreUid` and level-1
+  auto tiles.
+- Added `connect.ts` connection masks (N=1, E=2, S=4, W=8, D025) and
+  `affectedByChange`.
+- Extended `cells.getLevelRange` to return `null` under multi-cell items (D026).
+- Added `src/main.tsx` to the coverage exclude list.
+- Added `footprint.test.ts`, `placement.test.ts` and `connect.test.ts`, extended
+  `cells.test.ts` and `purity.test.ts`.
+
+Verification:
+
+- `npm test` 88 → 131 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` is 100% statements, branches, functions and lines;
+  no coverage exclusions. Overall branches are 99.31% (only
+  `src/assets/redirect.ts` line 3 uncovered).
+
+Not done: commands, undo/redo, coins, inventory, stores, rendering and the starting
+rotation (a UI concern).
+
+### 2026-11-18 — fix: item map, level range and connectable checks
+
+Done:
+
+- Added `PlacedItems = ReadonlyMap<uid, PlacedItem>` (D027). `buildOccupancy`,
+  `itemAt`, `getConnectionMask` and `getLevelRange` now take the map and look up by
+  uid instead of scanning an array.
+- `getLevelRange(x, z, { cells, occupancy, items }, catalog)` takes all inputs as
+  required parameters and throws on an unknown occupancy uid or missing catalog entry.
+- Extracted the shared `itemDefinition` catalog lookup in `catalog.ts`; placement,
+  connection and level logic import it from there.
+- `getConnectionMask` now takes `catalog` and returns 0 for non-connectable items.
+- Added tests for insertion-order-independent occupancy, `occupied` before
+  `wrongTile`, adjacent same-id non-connectables, and the new `getLevelRange` and
+  `getConnectionMask` error cases.
+- Moved the lookup to `catalog.ts` and added direct `itemDefinition` tests; no
+  behaviour change (138 tests).
+
+Verification:
+
+- `npm test` 131 → 138 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines; no coverage exclusions.

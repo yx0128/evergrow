@@ -1,0 +1,116 @@
+import type { InvalidReason, ItemDef, Rotation, TileType } from '../config/evergrow.config'
+import { itemDefinition } from './catalog'
+import { MIN_LEVEL, type Cell, type CellMap } from './cells'
+import { getFootprintCells } from './footprint'
+import { isBuildable, isInWorld, key } from './grid'
+
+export interface PlacedItem {
+  readonly uid: string
+  readonly id: string
+  readonly x: number
+  readonly z: number
+  readonly rot: Rotation
+}
+
+/** Placed items keyed by uid. */
+export type PlacedItems = ReadonlyMap<string, PlacedItem>
+
+/** Cell key → uid of the item covering it. */
+export type Occupancy = ReadonlyMap<string, string>
+
+export interface PlacementState {
+  readonly cells: CellMap
+  readonly occupancy: Occupancy
+}
+
+export type PlacementResult =
+  | { readonly ok: true; readonly autoTiles: Cell[] }
+  | { readonly ok: false; readonly reason: InvalidReason }
+
+/** Map every footprint cell of every placed item to that item's uid. */
+export function buildOccupancy(
+  items: PlacedItems,
+  catalog: ReadonlyMap<string, ItemDef>,
+): Occupancy {
+  const occupancy = new Map<string, string>()
+  for (const item of items.values()) {
+    const def = itemDefinition(catalog, item.id)
+    for (const cell of getFootprintCells(def, item.x, item.z, item.rot)) {
+      occupancy.set(key(cell.x, cell.z), item.uid)
+    }
+  }
+  return occupancy
+}
+
+/** The placed item covering a cell, if any. */
+export function itemAt(
+  x: number,
+  z: number,
+  occupancy: Occupancy,
+  items: PlacedItems,
+): PlacedItem | undefined {
+  const uid = occupancy.get(key(x, z))
+  if (uid === undefined) return undefined
+  return items.get(uid)
+}
+
+/**
+ * Placement rules (§6.3), checked in this order: outside the world, outside the
+ * buildable zone, occupied, wrong tile, uneven ground. `ignoreUid` lets an item
+ * move onto its own cells. Empty footprint cells become level-1 auto tiles.
+ */
+export function validatePlacement(
+  item: ItemDef,
+  x: number,
+  z: number,
+  rot: Rotation,
+  autoTile: TileType,
+  state: PlacementState,
+  ignoreUid?: string,
+): PlacementResult {
+  const footprint = getFootprintCells(item, x, z, rot)
+
+  for (const point of footprint) {
+    if (!isInWorld(point.x, point.z)) return { ok: false, reason: 'outsideWorld' }
+  }
+
+  for (const point of footprint) {
+    if (!isBuildable(point.x, point.z, state.cells)) {
+      return { ok: false, reason: 'outsideBuildableZone' }
+    }
+  }
+
+  for (const point of footprint) {
+    const uid = state.occupancy.get(key(point.x, point.z))
+    if (uid !== undefined && uid !== ignoreUid) {
+      return { ok: false, reason: 'occupied' }
+    }
+  }
+
+  if (!item.allowedTiles.includes(autoTile)) {
+    return { ok: false, reason: 'wrongTile' }
+  }
+  for (const point of footprint) {
+    const cell = state.cells.get(key(point.x, point.z))
+    if (cell && !item.allowedTiles.includes(cell.type)) {
+      return { ok: false, reason: 'wrongTile' }
+    }
+  }
+
+  let level: number | undefined
+  for (const point of footprint) {
+    const cell = state.cells.get(key(point.x, point.z))
+    const cellLevel = cell?.level ?? MIN_LEVEL
+    if (level === undefined) level = cellLevel
+    if (level !== cellLevel) return { ok: false, reason: 'unevenGround' }
+  }
+
+  const autoTiles: Cell[] = []
+  for (const point of footprint) {
+    if (!state.cells.has(key(point.x, point.z))) {
+      autoTiles.push({ x: point.x, z: point.z, type: autoTile, level: MIN_LEVEL })
+    }
+  }
+
+  return { ok: true, autoTiles }
+}

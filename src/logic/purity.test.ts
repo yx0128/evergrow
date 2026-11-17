@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONFIG } from '../config/evergrow.config'
+import { CONFIG, type ItemDef } from '../config/evergrow.config'
 import {
   digUp,
   getLevelRange,
@@ -10,7 +10,15 @@ import {
   setType,
 } from './cells'
 import type { CellMap } from './cells'
+import { affectedByChange, getConnectionMask } from './connect'
+import { getFootprintCells, rotatedSize } from './footprint'
 import { isBuildable, landBounds, key } from './grid'
+import {
+  buildOccupancy,
+  itemAt,
+  validatePlacement,
+  type PlacedItems,
+} from './placement'
 
 const MAX = CONFIG.world.maxStack
 
@@ -30,6 +38,48 @@ function expectPure(run: (cells: CellMap) => unknown): void {
 
   expect([...cells]).toEqual(before)
   expect(cells.size).toBe(size)
+}
+
+function expectDeepPure<T>(make: () => T, run: (value: T) => unknown): void {
+  const value = make()
+  const before = structuredClone(value)
+
+  run(value)
+
+  expect(value).toEqual(before)
+}
+
+const item = (
+  overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>,
+): ItemDef => ({
+  name: overrides.id,
+  category: 'test',
+  price: 0,
+  defaultTile: 'grass',
+  allowedTiles: ['grass', 'land'],
+  connectable: false,
+  rotatable: false,
+  model: `assets/models/${overrides.id}.glb`,
+  thumb: `assets/thumbs/${overrides.id}.png`,
+  emissive: false,
+  ...overrides,
+})
+
+const cottage = item({ id: 'cottage', footprint: [2, 3] })
+const lamp = item({ id: 'lamp', footprint: [1, 1] })
+const catalog = new Map<string, ItemDef>([
+  [cottage.id, cottage],
+  [lamp.id, lamp],
+])
+const items: PlacedItems = new Map([
+  ['a', { uid: 'a', id: 'cottage', x: 0, z: 0, rot: 0 }],
+  ['b', { uid: 'b', id: 'lamp', x: 5, z: 5, rot: 0 }],
+])
+
+function placement() {
+  const cells = base()
+  const occupancy = buildOccupancy(items, catalog)
+  return { cells, occupancy, items, catalog }
 }
 
 describe('logic purity', () => {
@@ -82,6 +132,64 @@ describe('logic purity', () => {
   })
 
   it('getLevelRange does not mutate the input', () => {
-    expectPure((cells) => getLevelRange(0, 0, cells))
+    expectPure((cells) =>
+      getLevelRange(0, 0, { cells, occupancy: new Map(), items: new Map() }, catalog),
+    )
+  })
+
+  it('getLevelRange with item metadata does not mutate the input', () => {
+    expectDeepPure(placement, (value) =>
+      getLevelRange(
+        0,
+        0,
+        { cells: value.cells, occupancy: value.occupancy, items: value.items },
+        value.catalog,
+      ),
+    )
+  })
+
+  it('rotatedSize and getFootprintCells do not mutate the item', () => {
+    expectDeepPure(
+      () => cottage,
+      (value) => {
+        rotatedSize(value, 1)
+        getFootprintCells(value, 2, -1, 3)
+      },
+    )
+  })
+
+  it('buildOccupancy does not mutate the items or catalog', () => {
+    expectDeepPure(
+      () => ({ items, catalog }),
+      (value) => buildOccupancy(value.items, value.catalog),
+    )
+  })
+
+  it('itemAt does not mutate the occupancy or items', () => {
+    expectDeepPure(placement, (value) => itemAt(0, 0, value.occupancy, value.items))
+  })
+
+  it('validatePlacement does not mutate the item or state', () => {
+    expectDeepPure(placement, (value) =>
+      validatePlacement(
+        cottage,
+        0,
+        0,
+        0,
+        'grass',
+        { cells: value.cells, occupancy: value.occupancy },
+        'a',
+      ),
+    )
+  })
+
+  it('getConnectionMask does not mutate the items or occupancy', () => {
+    expectDeepPure(placement, (value) =>
+      getConnectionMask('a', value.items, value.occupancy, value.catalog),
+    )
+  })
+
+  it('affectedByChange returns a fresh list', () => {
+    expect(affectedByChange(2, -3)).not.toBe(affectedByChange(2, -3))
   })
 })

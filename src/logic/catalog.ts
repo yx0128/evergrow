@@ -1,5 +1,15 @@
 import type { ItemDef } from '../config/evergrow.config'
 
+/** Catalog lookup shared by item placement, connection and level logic. */
+export function itemDefinition(
+  catalog: ReadonlyMap<string, ItemDef>,
+  id: string,
+): ItemDef {
+  const def = catalog.get(id)
+  if (!def) throw new Error(`Unknown item id: ${id}`)
+  return def
+}
+
 /** Validate an item catalog. Returns human-readable errors; empty means valid. */
 export function validateCatalog(
   items: readonly ItemDef[],

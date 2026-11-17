@@ -1,9 +1,13 @@
 import {
   CONFIG,
   type InvalidReason,
+  type ItemDef,
   type TileType,
 } from '../config/evergrow.config'
+import { itemDefinition } from './catalog'
+import { rotatedSize } from './footprint'
 import { isBuildable, isInWorld, key } from './grid'
+import type { Occupancy, PlacedItems } from './placement'
 
 /** Brief §5.2: every column's level is 1..`maxStack`. */
 export const MIN_LEVEL = 1
@@ -122,10 +126,27 @@ export function digUp(cells: CellMap, x: number, z: number): CellResult {
 }
 
 /**
- * Height slider range for a column (§5.4). Every cell can be `MIN_LEVEL`..`maxStack`;
- * coordinates and cells are accepted now so item-on-top limits (§6.4) can narrow
- * the range later.
+ * Height slider range for a column (§5.4, §6.4). A cell under a multi-cell item
+ * returns null because the slider is disabled and editing happens from the item.
+ * A 1×1 item rides with its tile. Missing occupancy or catalog data throws.
  */
-export function getLevelRange(_x: number, _z: number, _cells: CellMap): LevelRange {
+export function getLevelRange(
+  x: number,
+  z: number,
+  world: {
+    readonly cells: CellMap
+    readonly occupancy: Occupancy
+    readonly items: PlacedItems
+  },
+  catalog: ReadonlyMap<string, ItemDef>,
+): LevelRange | null {
+  const uid = world.occupancy.get(key(x, z))
+  if (uid !== undefined) {
+    const item = world.items.get(uid)
+    if (!item) throw new Error(`Unknown item uid: ${uid}`)
+    const def = itemDefinition(catalog, item.id)
+    const [w, d] = rotatedSize(def, item.rot)
+    if (w * d > 1) return null
+  }
   return { min: MIN_LEVEL, max: CONFIG.world.maxStack }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { CONFIG } from '../config/evergrow.config'
 import type { ItemDef } from '../config/evergrow.config'
-import { validateCatalog } from './catalog'
+import { itemDefinition, validateCatalog } from './catalog'
 
 const validItem: ItemDef = {
   id: 'cottage',
@@ -17,6 +17,18 @@ const validItem: ItemDef = {
   thumb: 'assets/thumbs/cottage.png',
   emissive: false,
 }
+
+describe('itemDefinition', () => {
+  const catalog = new Map([[validItem.id, validItem]])
+
+  it('returns the definition for a known id', () => {
+    expect(itemDefinition(catalog, 'cottage')).toBe(validItem)
+  })
+
+  it('throws for an unknown id', () => {
+    expect(() => itemDefinition(catalog, 'missing')).toThrow('Unknown item id: missing')
+  })
+})
 
 describe('validateCatalog', () => {
   it('accepts a valid catalog and the shipped config', () => {
