@@ -28,3 +28,24 @@ body {
   position: absolute !important;
   inset: 0;
 }
+
+.app-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 0.5rem;
+  max-width: 32rem;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.app-fallback p {
+  margin: 0;
+}
+
+.app-fallback-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
