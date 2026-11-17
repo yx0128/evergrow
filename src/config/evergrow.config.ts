@@ -1,3 +1,4 @@
+// Must stay free of browser, React and three imports: vite.config imports this file.
 export type TileType = 'grass' | 'land' | 'water'
 export type TaskSize = 'tiny' | 'small' | 'medium' | 'big'
 export type Quality = 'high' | 'low'
@@ -6,137 +7,146 @@ export type TimeOfDay = 'dawn' | 'day' | 'dusk' | 'night'
 
 export interface FontsConfig {
   /** Only used for the app name. */
-  title: string
-  heading: string
-  body: string
+  readonly title: string
+  readonly heading: string
+  readonly body: string
+  readonly fallback: string
 }
 
 export interface EconomyConfig {
   /** Coin reward per task size. */
-  taskReward: Record<TaskSize, number>
-  /** Fraction of the parent reward shared across subtasks once they are all complete. */
-  subtaskShare: number
+  readonly taskReward: Readonly<Record<TaskSize, number>>
+  /** Fraction of the parent reward shared across subtasks; each subtask is paid when completed. */
+  readonly subtaskShare: number
   /** Fraction of the item price refunded when selling. 1 = full refund. */
-  sellRefund: number
-  tileCost: number
-  allowNegativeCoins: boolean
+  readonly sellRefund: number
+  readonly tileCost: number
+  readonly allowNegativeCoins: boolean
 }
 
 export interface FocusConfig {
-  free: {
-    coinsPerBlock: number
-    blockMinutes: number
-    minMinutes: number
+  readonly free: {
+    readonly coinsPerBlock: number
+    readonly blockMinutes: number
+    readonly minMinutes: number
   }
-  pomodoro: {
-    focusMin: number
-    shortBreakMin: number
-    longBreakMin: number
-    cyclesBeforeLong: number
-    coinsPerBlock: number
+  readonly pomodoro: {
+    readonly focusMin: number
+    readonly shortBreakMin: number
+    readonly longBreakMin: number
+    readonly cyclesBeforeLong: number
+    readonly coinsPerBlock: number
   }
 }
 
 export interface WorldConfig {
-  maxSize: number
-  startZone: number
-  buildableRing: number
-  maxStack: number
-  tileThickness: number
-  waterMaxStep: number
-  chunkSize: number
-  cameraBoundsMargin: number
+  readonly maxSize: number
+  readonly startZone: number
+  readonly buildableRing: number
+  readonly maxStack: number
+  readonly tileThickness: number
+  readonly waterMaxStep: number
+  readonly chunkSize: number
+  readonly cameraBoundsMargin: number
 }
 
 export interface CameraConfig {
-  minPolarDeg: number
-  maxPolarDeg: number
-  minZoom: number
-  maxZoom: number
-  snapRotateDeg: number
-  transitionMs: number
-  panSpeed: number
-  rotateSpeed: number
-  zoomSpeed: number
+  readonly minPolarDeg: number
+  readonly maxPolarDeg: number
+  readonly minZoom: number
+  readonly maxZoom: number
+  readonly homePosition: readonly [number, number, number]
+  readonly defaultZoom: number
+  readonly snapRotateDeg: number
+  readonly transitionMs: number
+  readonly panSpeed: number
+  readonly rotateSpeed: number
+  readonly zoomSpeed: number
 }
 
 export interface MotionConfig {
-  dropFadeMs: number
-  digUpFadeMs: number
-  tileAddFadeMs: number
-  coinCountUpMs: number
-  gridFadeMs: number
-  panelMs: number
-  ghostLerpMs: number
-  ghostOpacity: number
+  readonly dropFadeMs: number
+  readonly digUpFadeMs: number
+  readonly tileAddFadeMs: number
+  readonly coinCountUpMs: number
+  readonly gridFadeMs: number
+  readonly panelMs: number
+  readonly ghostLerpMs: number
+  readonly ghostOpacity: number
 }
 
 export interface DayNightConfig {
-  useLocalTime: boolean
+  readonly useLocalTime: boolean
   /** Hours in 24h local time for each keyframe. */
-  keyframes: Record<TimeOfDay, number>
+  readonly keyframes: Readonly<Record<TimeOfDay, number>>
 }
 
 export interface RenderingConfig {
-  shadowMapSize: number
-  maxPointLights: number
-  pixelRatioCap: number
-  quality: Quality
-  bloom: boolean
+  readonly shadowMapSize: number
+  readonly maxPointLights: number
+  readonly pixelRatioCap: number
+  readonly quality: Quality
+  readonly bloom: boolean
 }
 
 export interface VariationConfig {
-  scale: number
-  hue: number
+  readonly scale: number
+  readonly hue: number
 }
 
 export interface UiConfig {
-  toastMs: number
-  autosaveDebounceMs: number
-  storagePrefix: string
+  readonly toastMs: number
+  readonly autosaveDebounceMs: number
+  readonly storagePrefix: string
 }
 
 export interface StarterConfig {
-  coins: number
-  items: string[]
+  readonly coins: number
+  readonly items: readonly string[]
 }
 
 export interface PaletteConfig {
-  background: Record<TimeOfDay, string>
-  valid: string
-  invalid: string
-  ui: {
-    surface: string
-    surfaceRaised: string
-    text: string
-    textMuted: string
-    accent: string
-    border: string
-    focus: string
+  readonly background: Readonly<Record<TimeOfDay, string>>
+  readonly valid: string
+  readonly invalid: string
+  readonly ui: {
+    readonly surface: string
+    readonly surfaceRaised: string
+    readonly text: string
+    readonly textMuted: string
+    readonly accent: string
+    readonly border: string
+    readonly focus: string
   }
 }
 
 export interface TileDef {
-  name: string
-  transparent: boolean
+  readonly name: string
+  readonly transparent: boolean
+}
+
+export interface PointLightDef {
+  readonly color: string
+  readonly intensity: number
+  readonly distance: number
 }
 
 export interface ItemDef {
-  id: string
-  name: string
-  category: string
-  price: number
-  footprint: [w: number, d: number]
-  defaultTile: TileType
-  allowedTiles: TileType[]
-  connectable: boolean
-  rotatable: boolean
+  readonly id: string
+  readonly name: string
+  readonly category: string
+  readonly price: number
+  readonly footprint: readonly [w: number, d: number]
+  readonly defaultTile: TileType
+  readonly allowedTiles: readonly TileType[]
+  readonly connectable: boolean
+  readonly rotatable: boolean
   /** Relative public path, e.g. "assets/models/cottage.glb". */
-  model: string
+  readonly model: string
   /** Relative public path, e.g. "assets/thumbs/cottage.png". */
-  thumb: string
-  emissive: boolean
-  pointLight?: { color: string; intensity: number; distance: number }
+  readonly thumb: string
+  readonly emissive: boolean
+  readonly pointLight?: PointLightDef
 }
 
 export type InvalidReason =
@@ -150,31 +160,43 @@ export type InvalidReason =
   | 'underItem'
   | 'unaffordable'
 
-export interface EvergrowConfig {
-  fonts: FontsConfig
-  economy: EconomyConfig
-  focus: FocusConfig
-  world: WorldConfig
-  camera: CameraConfig
-  motion: MotionConfig
-  dayNight: DayNightConfig
-  rendering: RenderingConfig
-  variation: VariationConfig
-  ui: UiConfig
-  starter: StarterConfig
-  palette: PaletteConfig
-  tiles: Record<TileType, TileDef>
-  items: ItemDef[]
-  strings: { invalid: Record<InvalidReason, string> }
-  saveSchemaVersion: number
+export interface StringsConfig {
+  readonly invalid: Readonly<Record<InvalidReason, string>>
+  readonly webglUnavailable: {
+    readonly title: string
+    readonly body: string
+  }
 }
 
-export const evergrowConfig: EvergrowConfig = {
+export interface EvergrowConfig {
+  readonly appName: string
+  readonly fonts: FontsConfig
+  readonly economy: EconomyConfig
+  readonly focus: FocusConfig
+  readonly world: WorldConfig
+  readonly camera: CameraConfig
+  readonly motion: MotionConfig
+  readonly dayNight: DayNightConfig
+  readonly rendering: RenderingConfig
+  readonly variation: VariationConfig
+  readonly ui: UiConfig
+  readonly starter: StarterConfig
+  readonly palette: PaletteConfig
+  readonly tiles: Readonly<Record<TileType, TileDef>>
+  readonly items: readonly ItemDef[]
+  readonly strings: StringsConfig
+  readonly saveSchemaVersion: number
+}
+
+export const CONFIG: EvergrowConfig = {
+  appName: 'Evergrow',
+
   // TODO(decision): font families are placeholders; add the files under public/assets/fonts.
   fonts: {
     title: 'Fraunces',
     heading: 'Nunito',
     body: 'Nunito',
+    fallback: 'system-ui, sans-serif',
   },
 
   economy: {
@@ -221,6 +243,8 @@ export const evergrowConfig: EvergrowConfig = {
     maxPolarDeg: 80,
     minZoom: 12,
     maxZoom: 48,
+    homePosition: [10, 10, 10],
+    defaultZoom: 24,
     snapRotateDeg: 90,
     transitionMs: 300,
     panSpeed: 12,
@@ -304,6 +328,10 @@ export const evergrowConfig: EvergrowConfig = {
   items: [],
 
   strings: {
+    webglUnavailable: {
+      title: '3D view unavailable',
+      body: 'This browser could not start WebGL. Try enabling hardware acceleration or using another desktop browser.',
+    },
     invalid: {
       outsideBuildableZone: 'Outside the buildable area',
       outsideWorld: 'Outside the world',
@@ -319,5 +347,3 @@ export const evergrowConfig: EvergrowConfig = {
 
   saveSchemaVersion: 1,
 }
-
-export default evergrowConfig

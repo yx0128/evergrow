@@ -1,7 +1,7 @@
 import { Canvas } from '@react-three/fiber'
-import { evergrowConfig } from './config/evergrow.config'
+import { CONFIG } from './config/evergrow.config'
 
-const background = evergrowConfig.palette.background.day
+const background = CONFIG.palette.background.day
 
 function App() {
   return (
@@ -9,12 +9,12 @@ function App() {
       className="app"
       style={{
         backgroundColor: background,
-        fontFamily: `'${evergrowConfig.fonts.body}', system-ui, sans-serif`,
+        fontFamily: `'${CONFIG.fonts.body}', system-ui, sans-serif`,
       }}
     >
       <Canvas
         className="app-canvas"
-        dpr={[1, evergrowConfig.rendering.pixelRatioCap]}
+        dpr={[1, CONFIG.rendering.pixelRatioCap]}
         gl={{ antialias: true }}
       >
         <color attach="background" args={[background]} />

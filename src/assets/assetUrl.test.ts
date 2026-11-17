@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { evergrowConfig } from '../config/evergrow.config'
+import { CONFIG } from '../config/evergrow.config'
 import { assetUrl, storageKey } from './assetUrl'
 
 describe('assetUrl', () => {
@@ -14,7 +14,7 @@ describe('assetUrl', () => {
 
 describe('storageKey', () => {
   it('namespaces keys for the shared github.io origin', () => {
-    expect(storageKey('save')).toBe(`${evergrowConfig.ui.storagePrefix}save`)
+    expect(storageKey('save')).toBe(`${CONFIG.ui.storagePrefix}save`)
     expect(storageKey('save')).toBe('evergrow:save')
   })
 })

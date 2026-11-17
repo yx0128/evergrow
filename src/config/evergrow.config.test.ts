@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { evergrowConfig as config } from './evergrow.config'
-import type { TileType } from './evergrow.config'
+import { describe, expect, expectTypeOf, it } from 'vitest'
+import { CONFIG as config } from './evergrow.config'
+import type { ItemDef, Quality, TileType } from './evergrow.config'
 
 const TILE_TYPES: TileType[] = ['grass', 'land', 'water']
 
@@ -134,5 +134,18 @@ describe('evergrow config', () => {
   it('has a save schema version', () => {
     expect(Number.isInteger(config.saveSchemaVersion)).toBe(true)
     expect(config.saveSchemaVersion).toBeGreaterThanOrEqual(1)
+  })
+
+  it('exposes wide, readonly config types', () => {
+    expectTypeOf(config.rendering.quality).toEqualTypeOf<Quality>()
+    expectTypeOf(config.items[0]).toEqualTypeOf<ItemDef>()
+    expectTypeOf(config.world.maxStack).toEqualTypeOf<number>()
+    expect(config.rendering.quality === 'low').toBe(false)
+    expect(config.items.find((item) => item.id === 'missing')).toBeUndefined()
+    const mutate = () => {
+      // @ts-expect-error CONFIG is readonly
+      config.world.maxStack = 99
+    }
+    expect(mutate).toBeTypeOf('function')
   })
 })
