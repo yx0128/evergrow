@@ -277,7 +277,7 @@ export const evergrowConfig: EvergrowConfig = {
   palette: {
     background: {
       dawn: '#f3e7d8',
-      day: '#e9e3d7',
+      day: '#d7e0e9',
       dusk: '#e7cdb9',
       night: '#2c3242',
     },
