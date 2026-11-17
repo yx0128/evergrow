@@ -17,7 +17,7 @@ const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): 
 })
 
 const lamp = item({ id: 'lamp', footprint: [1, 1] })
-const cottage = item({ id: 'cottage', footprint: [2, 3], allowedTiles: ['grass', 'land'] })
+const cottage = item({ id: 'cottage', footprint: [2, 2], allowedTiles: ['grass', 'land'] })
 const fence = item({ id: 'fence', footprint: [1, 1] })
 
 const cells = (x: number, z: number, w: number, d: number): { x: number; z: number }[] => {
@@ -31,11 +31,12 @@ const cells = (x: number, z: number, w: number, d: number): { x: number; z: numb
 }
 
 describe('rotatedSize', () => {
-  it('keeps a 2×3 footprint at rot 0 and 2, and swaps it at rot 1 and 3', () => {
-    expect(rotatedSize(cottage, 0)).toEqual([2, 3])
-    expect(rotatedSize(cottage, 1)).toEqual([3, 2])
-    expect(rotatedSize(cottage, 2)).toEqual([2, 3])
-    expect(rotatedSize(cottage, 3)).toEqual([3, 2])
+  it('stays generic: swaps a non-square footprint at rot 1 and 3', () => {
+    const wide = item({ id: 'wide', footprint: [2, 3] })
+    expect(rotatedSize(wide, 0)).toEqual([2, 3])
+    expect(rotatedSize(wide, 1)).toEqual([3, 2])
+    expect(rotatedSize(wide, 2)).toEqual([2, 3])
+    expect(rotatedSize(wide, 3)).toEqual([3, 2])
   })
 
   it('keeps a 1×1 footprint square at every rotation', () => {
@@ -45,16 +46,11 @@ describe('rotatedSize', () => {
 })
 
 describe('getFootprintCells', () => {
-  it('covers a 2×3 footprint row by row at rot 0 and 2', () => {
-    const expected = cells(2, -1, 2, 3)
-    expect(getFootprintCells(cottage, 2, -1, 0)).toEqual(expected)
-    expect(getFootprintCells(cottage, 2, -1, 2)).toEqual(expected)
-  })
-
-  it('covers a 3×2 footprint row by row at rot 1 and 3', () => {
-    const expected = cells(2, -1, 3, 2)
-    expect(getFootprintCells(cottage, 2, -1, 1)).toEqual(expected)
-    expect(getFootprintCells(cottage, 2, -1, 3)).toEqual(expected)
+  it('covers the same 2×2 cells at rot 0–3', () => {
+    const expected = cells(2, -1, 2, 2)
+    for (const rot of [0, 1, 2, 3] as const) {
+      expect(getFootprintCells(cottage, 2, -1, rot)).toEqual(expected)
+    }
   })
 
   it('keeps the anchor at the min-x/min-z corner after rotation', () => {
@@ -62,7 +58,7 @@ describe('getFootprintCells', () => {
       const footprint = getFootprintCells(cottage, 2, -1, rot)
       expect(Math.min(...footprint.map((point) => point.x))).toBe(2)
       expect(Math.min(...footprint.map((point) => point.z))).toBe(-1)
-      expect(footprint).toHaveLength(6)
+      expect(footprint).toHaveLength(4)
     }
   })
 

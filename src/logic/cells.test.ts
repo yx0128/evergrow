@@ -247,7 +247,7 @@ describe('getLevelRange', () => {
     ...overrides,
   })
   const lamp = item({ id: 'lamp', footprint: [1, 1] })
-  const cottage = item({ id: 'cottage', footprint: [2, 3] })
+  const cottage = item({ id: 'cottage', footprint: [2, 2] })
   const catalog = new Map<string, ItemDef>([
     [lamp.id, lamp],
     [cottage.id, cottage],
@@ -278,19 +278,18 @@ describe('getLevelRange', () => {
     ).toEqual(range)
   })
 
-  it('returns null under a multi-cell item', () => {
-    const items = itemsOf(placed('a', cottage, 1, 1))
-    const occupancy = buildOccupancy(items, catalog)
+  it('returns null under any item', () => {
+    const cottageItems = itemsOf(placed('a', cottage, 1, 1))
+    const cottageOccupancy = buildOccupancy(cottageItems, catalog)
+    expect(
+      getLevelRange(1, 1, { cells: mapWith(), occupancy: cottageOccupancy, items: cottageItems }, catalog),
+    ).toBeNull()
 
-    expect(getLevelRange(1, 1, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
-    expect(getLevelRange(2, 3, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
-  })
-
-  it('returns the full range under a 1×1 item', () => {
-    const items = itemsOf(placed('a', lamp, 0, 0))
-    const occupancy = buildOccupancy(items, catalog)
-
-    expect(getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, catalog)).toEqual(range)
+    const lampItems = itemsOf(placed('a', lamp, 0, 0))
+    const lampOccupancy = buildOccupancy(lampItems, catalog)
+    expect(
+      getLevelRange(0, 0, { cells: mapWith(), occupancy: lampOccupancy, items: lampItems }, catalog),
+    ).toBeNull()
   })
 
   it('throws when an occupancy uid has no matching item', () => {

@@ -29,7 +29,7 @@ const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): 
 })
 
 const lamp = item({ id: 'lamp', footprint: [1, 1], allowedTiles: ['grass'] })
-const cottage = item({ id: 'cottage', footprint: [2, 3], rotatable: true })
+const cottage = item({ id: 'cottage', footprint: [2, 2], rotatable: true })
 const fence = item({
   id: 'fence',
   footprint: [1, 1],
@@ -82,8 +82,8 @@ describe('buildOccupancy', () => {
     const items = itemsOf(placed('a', cottage, 1, 1), placed('b', lamp, 5, 5))
     const occupancy = buildOccupancy(items, catalog)
 
-    expect(occupancy.size).toBe(7)
-    for (const point of cellsIn(1, 1, 2, 3)) {
+    expect(occupancy.size).toBe(5)
+    for (const point of cellsIn(1, 1, 2, 2)) {
       expect(occupancy.get(key(point.x, point.z))).toBe('a')
     }
     expect(occupancy.get(key(5, 5))).toBe('b')
@@ -96,12 +96,12 @@ describe('buildOccupancy', () => {
     expect(buildOccupancy(second, catalog)).toEqual(buildOccupancy(first, catalog))
   })
 
-  it('uses the rotated footprint', () => {
+  it('covers the same square footprint when rotated', () => {
     const occupancy = buildOccupancy(itemsOf(placed('a', cottage, 0, 0, 1)), catalog)
 
-    expect(occupancy.size).toBe(6)
-    expect(occupancy.get(key(2, 0))).toBe('a')
-    expect(occupancy.get(key(0, 2))).toBeUndefined()
+    expect(occupancy.size).toBe(4)
+    expect(occupancy.get(key(1, 1))).toBe('a')
+    expect(occupancy.get(key(2, 0))).toBeUndefined()
   })
 
   it('throws for an item id missing from the catalog', () => {
@@ -140,7 +140,7 @@ describe('validatePlacement', () => {
       stateOf(itemsOf()),
     )
 
-    expect(result).toEqual({ ok: true, autoTiles: cellsIn(0, 0, 2, 3) })
+    expect(result).toEqual({ ok: true, autoTiles: cellsIn(0, 0, 2, 2) })
   })
 
   it('returns outsideWorld when part of the footprint is past the world cap', () => {
@@ -253,7 +253,7 @@ describe('validatePlacement', () => {
       stateOf(itemsOf(), mapWith(cell(0, 0, 'grass', 1))),
     )
 
-    expect(result).toEqual({ ok: true, autoTiles: cellsIn(0, 0, 2, 3).slice(1) })
+    expect(result).toEqual({ ok: true, autoTiles: cellsIn(0, 0, 2, 2).slice(1) })
   })
 
   it('returns no auto tiles when every footprint cell already has a tile', () => {
@@ -263,7 +263,7 @@ describe('validatePlacement', () => {
       0,
       0,
       'grass',
-      stateOf(itemsOf(), mapWith(...cellsIn(0, 0, 2, 3))),
+      stateOf(itemsOf(), mapWith(...cellsIn(0, 0, 2, 2))),
     )
 
     expect(result).toEqual({ ok: true, autoTiles: [] })

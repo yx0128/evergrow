@@ -65,7 +65,7 @@ const item = (
   ...overrides,
 })
 
-const cottage = item({ id: 'cottage', footprint: [2, 3] })
+const cottage = item({ id: 'cottage', footprint: [2, 2] })
 const lamp = item({ id: 'lamp', footprint: [1, 1] })
 const catalog = new Map<string, ItemDef>([
   [cottage.id, cottage],

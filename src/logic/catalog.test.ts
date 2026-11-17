@@ -53,6 +53,14 @@ describe('validateCatalog', () => {
     )
   })
 
+  it('rejects non-square footprints and accepts 1×1 and 2×2', () => {
+    expect(validateCatalog([{ ...validItem, footprint: [2, 1] }], [])).toContain(
+      'non-square footprint: cottage',
+    )
+    expect(validateCatalog([{ ...validItem, footprint: [1, 1] }], [])).toEqual([])
+    expect(validateCatalog([validItem], [])).toEqual([])
+  })
+
   it('rejects a default tile that is not allowed', () => {
     expect(
       validateCatalog([{ ...validItem, defaultTile: 'water' }], []),

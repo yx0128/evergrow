@@ -199,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 138 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, purity, import guard)
+npm test         # 137 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -259,9 +259,9 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   unchanged (`{ ok: true, cells }`).
 - `getLevelRange(x, z, world, catalog)` → `LevelRange | null`, where
   `world = { cells, occupancy, items }` and all parameters are required. It returns
-  `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }` for bare tiles and 1×1 items, and
-  `null` under a multi-cell item (slider disabled, edit from the item, D026). An
-  occupancy uid with no item, or an item id missing from the catalog, throws.
+  `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }` for bare tiles and `null` under
+  any item (tile settings come from the item, D029). An occupancy uid with no item,
+  or an item id missing from the catalog, throws.
 - Nothing is clamped and no input map is ever mutated.
 
 ### `src/logic/footprint.ts`
@@ -493,7 +493,7 @@ Done:
   auto tiles.
 - Added `connect.ts` connection masks (N=1, E=2, S=4, W=8, D025) and
   `affectedByChange`.
-- Extended `cells.getLevelRange` to return `null` under multi-cell items (D026).
+- Extended `cells.getLevelRange` to return `null` under items (D026, superseded by D029).
 - Added `src/main.tsx` to the coverage exclude list.
 - Added `footprint.test.ts`, `placement.test.ts` and `connect.test.ts`, extended
   `cells.test.ts` and `purity.test.ts`.
@@ -530,6 +530,26 @@ Done:
 Verification:
 
 - `npm test` 131 → 138 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines; no coverage exclusions.
+
+### 2026-11-18 — fix: square footprints and tile settings under items
+
+Done:
+
+- `validateCatalog` now rejects a footprint whose width and depth differ with
+  `non-square footprint: <id>` (D028).
+- `getLevelRange` returns `null` under any item, 1×1 included; it still throws on an
+  unknown uid or missing catalog entry. Single-cell height edits under an item are a
+  programming error (D029).
+- Replaced valid non-square fixtures with a 2×2 cottage across the logic tests.
+  `footprint.ts` is unchanged; its tests keep one generic non-square `rotatedSize`
+  case and add the 2×2 same-cells test for rot 0–3.
+
+Verification:
+
+- `npm test` 138 → 137 tests, `npm run build` and `npm run lint` pass (existing
   chunk-size warning only).
 - `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
   lines; no coverage exclusions.
