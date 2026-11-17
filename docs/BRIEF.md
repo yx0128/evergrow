@@ -55,7 +55,7 @@ src/
   config/evergrow.config.ts      # every tunable value + item & tile catalog
   logic/                         # pure TS, fully tested
     grid.ts                      # coords, keys "x,z", bounds, buildable zone
-    cells.ts                     # tile columns, levels, water rules
+    cells.ts                     # tile columns, levels
     footprint.ts                 # footprint + rotation math
     placement.ts                 # validation, invalid reasons
     connect.ts                   # fence/path neighbour linking
@@ -199,25 +199,13 @@ interface Cell { x: number; z: number; type: TileType; level: number } // level 
 
 **Tile popover**:
 - **Change type:** all 3 types shown; disallowed ones greyed out and disabled.
-- **Height slider:** dragging up adds tiles of the same type; dragging down removes them. Range is dynamic (§5.5).
+- **Height slider:** dragging up adds tiles of the same type; dragging down removes them. Range is 1 to `maxStack` (§5.4).
 - **Dig up** button.
 
-### 5.4 Water rules
-- For a water cell at level `L`, **each of its 3 adjacent sides** must be one of:
-  - ground (any non-water type) at level ≥ `L`
-  - water at level `L − 1`, `L`, or `L + 1` (`world.waterMaxStep` = 1)
-  - empty (no cell) — only if `L = 1`
-- Any ground change that would break a neighbour's water rule is blocked or range-limited.
-
-### 5.5 Height slider range (dynamic)
-Computed per cell from rules, never hard-coded:
-
-- **Ground cell:**
-  - max = `maxStack`
-  - min = max(1, highest adjacent water level)
-- **Water cell:**
-  - max = min(`maxStack`, lowest adjacent ground level, lowest adjacent water level + 1); if any side is empty, max = 1
-  - min = max(1, highest adjacent water level − 1)
+### 5.4 Stacking rules
+- Any tile type can sit next to any other type at any level. There are no water or neighbour rules.
+- Every cell's height range is 1 to `world.maxStack`.
+- Tile actions are only limited by items on top (see the item rules in §5.3).
 
 ---
 
@@ -266,7 +254,6 @@ All must pass:
 - No footprint cell is occupied by another item.
 - Every footprint cell is either empty (auto tile will be created) or has a top tile in `allowedTiles`.
 - All footprint cells are at the **same level** ("Uneven ground"). Empty cells count as level 1 (auto tile).
-- Auto tile creation must not violate water rules.
 
 ### 6.4 Item popover (click item in Edit mode)
 - **Move** (re-enters drag with this item)
@@ -361,7 +348,7 @@ Respect `prefers-reduced-motion`. Remove all transitions except camera moves (wh
 - Each tile type is exported as **separate meshes**: `top` and `side`, sized 1 × tileThickness × 1.
 - Renderer builds columns: top mesh at the top level only, side meshes only on **exposed** sides per level.
 - Use `InstancedMesh` per (tile type × part), grouped in 16×16 chunks.
-- Water: semi-transparent material, `depthWrite: false`, rendered after opaque geometry.
+- Water is a styled block, not liquid. The `top` mesh is semi-transparent (`depthWrite: false`, rendered after opaque geometry). The `side` mesh is fairly opaque (deeper blue, optional light top-edge band), so raised water reads as a deliberate water feature.
 
 ### 11.4 Item list (26 items)
 Items and allowed tile types to be decided.
@@ -419,7 +406,7 @@ All tunable values live in `src/config/evergrow.config.ts`. This is the list of 
 - **focus**
   - free: coinsPerBlock, blockMinutes, minMinutes
   - pomodoro: focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, coinsPerBlock
-- **world:** maxSize, startZone, buildableRing, maxStack, tileThickness (fixed), waterMaxStep, chunkSize, cameraBoundsMargin
+- **world:** maxSize, startZone, buildableRing, maxStack, tileThickness (fixed), chunkSize, cameraBoundsMargin
 - **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
 - **motion:** dropFadeMs, digUpFadeMs, tileAddFadeMs, coinCountUpMs, gridFadeMs, panelMs, ghostLerpMs, ghostOpacity
 - **dayNight:** useLocalTime, keyframes (dawn, day, dusk, night)
@@ -428,7 +415,7 @@ All tunable values live in `src/config/evergrow.config.ts`. This is the list of 
 - **ui:** toastMs, autosaveDebounceMs
 - **starter:** coins, items
 - **palette:** shared colours (background per time of day, valid/invalid tint, UI)
-- **tiles:** grass ("Grass"), land ("Land"), water ("Water", transparent)
+- **tiles:** grass ("Grass"), land ("Land"), water ("Water", semi-transparent top)
 - **items:** the item catalog (name, category, footprint, allowedTiles, price; see §6.1)
 - **strings:** invalid-reason messages
 - **saveSchemaVersion:** 1
