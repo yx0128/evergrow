@@ -1,14 +1,15 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
-import type { CSSProperties } from 'react'
+import type { CSSProperties, ReactElement, ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CONFIG } from './config/evergrow.config'
 import App from './App'
 
-const canvasState = vi.hoisted(() => ({ shouldThrow: false }))
+const canvasState = vi.hoisted(() => ({ shouldThrow: false, children: null as ReactNode }))
 
 vi.mock('@react-three/fiber', () => ({
-  Canvas: (props: { style?: CSSProperties }) => {
+  Canvas: (props: { style?: CSSProperties; children?: ReactNode }) => {
+    canvasState.children = props.children
     if (canvasState.shouldThrow) throw new Error('WebGL unavailable')
     return <div data-testid="canvas" style={props.style} />
   },
@@ -24,6 +25,7 @@ const rgb = (hex: string): string => {
 
 afterEach(() => {
   canvasState.shouldThrow = false
+  canvasState.children = null
   cleanup()
   vi.restoreAllMocks()
 })
@@ -33,6 +35,10 @@ describe('App', () => {
     render(<App />)
     const canvas = screen.getByTestId('canvas')
     expect(canvas.style.backgroundColor).toBe(rgb(CONFIG.palette.background.day))
+
+    const child = canvasState.children as ReactElement<{ args: readonly string[] }>
+    expect(child.type).toBe('color')
+    expect(child.props.args[0]).toBe(CONFIG.palette.background.day)
   })
 
   it('shows the WebGL fallback when the canvas throws', () => {

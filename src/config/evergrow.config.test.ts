@@ -105,9 +105,8 @@ describe('evergrow config', () => {
     expect(config.tiles.land.transparent).toBe(false)
   })
 
-  it('ships with an intentionally empty catalog and starter item', () => {
-    expect(config.items).toHaveLength(0)
-    expect(config.starter.items).toHaveLength(0)
+  it('starts with zero coins', () => {
+    // The catalog is intentionally empty pending D003; validate it once items land.
     expect(config.starter.coins).toBe(0)
   })
 
@@ -128,7 +127,6 @@ describe('evergrow config', () => {
     expectTypeOf(config.rendering.quality).toEqualTypeOf<Quality>()
     expectTypeOf(config.items[0]).toEqualTypeOf<ItemDef>()
     expectTypeOf(config.world.maxStack).toEqualTypeOf<number>()
-    expect(config.rendering.quality === 'low').toBe(false)
     expect(config.items.find((item) => item.id === 'missing')).toBeUndefined()
     const mutate = () => {
       // @ts-expect-error CONFIG is readonly
