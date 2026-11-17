@@ -76,6 +76,17 @@ Carried forward:
   from project code. **Do:** nothing in project code; check that it's gone after
   upgrading `@react-three/fiber`. **When:** at the next dependency update.
 
+### 2026-11-17 — Pages review fixes
+
+Done:
+
+- Added a base-aware SVG favicon, removing the `/favicon.ico` 404.
+- Set Pages concurrency to let running deploys finish and recorded Node 22 in DECISIONS.
+- Added a guard test against direct `localStorage` access and a tested 404 redirect helper.
+- Added the deploy badge, deployment section and updated README prerequisites/commands.
+
+Tests now total 29.
+
 ## Reproduce from scratch
 
 ```bash
@@ -171,7 +182,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 25 tests (config, catalog, assets, UI)
+npm test         # 29 tests (config, catalog, assets, UI, redirect)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"

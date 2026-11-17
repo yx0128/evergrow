@@ -4,7 +4,7 @@
 
 **To-do list meets cozy world-building.**
 
-[Live demo](https://yx0128.github.io/evergrow/) · [Report a bug](https://github.com/yx0128/evergrow/issues) · [Request a feature](https://github.com/yx0128/evergrow/issues)
+[![Deploy](https://github.com/yx0128/evergrow/actions/workflows/deploy.yml/badge.svg)](https://github.com/yx0128/evergrow/actions/workflows/deploy.yml) · [Live demo](https://yx0128.github.io/evergrow/) · [Report a bug](https://github.com/yx0128/evergrow/issues) · [Request a feature](https://github.com/yx0128/evergrow/issues)
 
 ![Evergrow screenshot]([PATH_TO_SCREENSHOT_OR_GIF])
 
@@ -89,7 +89,7 @@ Growth happens little by little, one small step at a time. Evergrow's goal is to
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 20 or later, and npm
+- [Node.js](https://nodejs.org/) 22 or later, and npm
 - A desktop browser with WebGL support (Chrome, Edge, Firefox or Safari)
 - [Blender](https://www.blender.org/download/) 4.x (only needed if you want to regenerate the 3D assets)
 
@@ -117,15 +117,24 @@ Growth happens little by little, one small step at a time. Evergrow's goal is to
 | `npm run build` | Builds the app for production into `dist/` |
 | `npm run preview` | Serves the production build locally |
 | `npm test` | Runs the test suite |
-| `npm run export-palette` | Exports the colour palette for the Blender scripts |
-| `blender -b -P assets-src/blender/export_all.py` | Regenerates all 3D models |
-| `blender -b -P assets-src/blender/render_thumbs.py` | Regenerates shop thumbnails |
 
 ### Configuration
 
 Every tunable value is in one file: `src/config/evergrow.config.ts`. That includes coin rewards, prices, focus lengths, world size, camera limits, animation timings, colours and the item list.
 
+## Deployment
+
+- `.github/workflows/deploy.yml` runs on every push to `main` and on manual dispatch: `npm ci` → `npm test` → `npm run build` → deploy. A failing test stops the deploy.
+- Production builds use `base: "/<repo>/"` derived from `GITHUB_REPOSITORY`, overridable with `VITE_BASE_PATH`. Local dev uses `/`.
+- Build every public asset URL with `assetUrl()` and keep catalog paths relative.
+- Every localStorage key goes through `storageKey()`.
+- `public/404.html` redirects unknown paths to the project root while keeping the query and hash.
+- See [D004–D006](docs/DECISIONS.md).
+
 ## Usage
+
+> **Note:** The features below are planned. The current build is a scaffold with a
+> full-window canvas and no game systems yet.
 
 1. **Place your first item.** Open the inventory, drag your starter item into the world, and let go when the preview snaps into place.
 2. **Add a task.** Press `N`, type a task, pick its size and press Enter. Add subtasks if it's a bigger one.
