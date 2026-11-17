@@ -20,7 +20,7 @@ const favicon = (): string => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="
 const faviconPlugin: Plugin = {
   name: 'favicon',
   configureServer(server) {
-    server.middlewares.use('/favicon.svg', (_request, response) => {
+    server.middlewares.use(`${server.config.base}favicon.svg`, (_request, response) => {
       response.setHeader('Content-Type', 'image/svg+xml')
       response.end(favicon())
     })
