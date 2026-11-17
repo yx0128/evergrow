@@ -9,6 +9,3 @@ coverage/
 !.env.example
 .vite/
 *.log
-Brief.txt
-brief.txt
-BRIEF.md

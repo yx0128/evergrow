@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Read the brief first
+    url: https://github.com/yx0128/evergrow/blob/main/docs/BRIEF.md
+    about: Check the product rules before filing a feature request.
+  - name: Security report
+    url: https://github.com/yx0128/evergrow/security/advisories/new
+    about: Report vulnerabilities privately, not in public issues.

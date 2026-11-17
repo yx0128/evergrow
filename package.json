@@ -30,5 +30,15 @@
     "typescript": "~7.0.2",
     "vite": "^8.3.6",
     "vitest": "^5.1.0"
+  },
+  "description": "A to-do list meets cozy world-building.",
+  "license": "MIT",
+  "homepage": "https://yx0128.github.io/evergrow/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yx0128/evergrow.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yx0128/evergrow/issues"
   }
 }

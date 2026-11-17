@@ -10,7 +10,7 @@
 
 </div>
 
-> **Project docs:** [agent handoff](docs/AGENT_HANDOFF.md) · [spec](docs/SPEC.md) · [build state](STATE.md)
+> **Project docs:** [brief](docs/BRIEF.md) · [progress](docs/PROGRESS.md) · [decisions](docs/DECISIONS.md) · [build state](docs/STATE.md)
 
 
 ---
@@ -166,7 +166,7 @@ Ideas, feedback and contributions are welcome!
 
 ## License
 
-Distributed under the [LICENSE NAME] License. See [`LICENSE`](LICENSE) for details.
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 
 ## Acknowledgements
 

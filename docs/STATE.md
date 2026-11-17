@@ -34,5 +34,5 @@ sqlite3 -header -column ~/.local/share/opencode/opencode.db \
 ```
 
 Per-message token detail is in the `message` table (`data` JSON column) filtered by
-`session_id`. See [`docs/AGENT_HANDOFF.md`](./docs/AGENT_HANDOFF.md) for the build
-context and [`docs/SPEC.md`](./docs/SPEC.md) for the full requirements.
+`session_id`. See [`PROGRESS.md`](./PROGRESS.md) for the build context, [`DECISIONS.md`](./DECISIONS.md)
+for choices and [`BRIEF.md`](./BRIEF.md) for the requirements.

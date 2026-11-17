@@ -1,8 +1,7 @@
-# Agent handoff
+# Progress
 
-Read this file first, then [`SPEC.md`](./SPEC.md) and [`../STATE.md`](../STATE.md).
-The original client brief (`brief.txt`) is intentionally gitignored. Do not add it
-to the repository.
+Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
+[`DECISIONS.md`](./DECISIONS.md) and [`STATE.md`](./STATE.md).
 
 ## Status
 
@@ -60,7 +59,7 @@ src/
   assets/                       # loaders, thumbnail cache
 public/assets/{models,thumbs,fonts}/
 assets-src/blender/             # one bpy script per asset + export_all.py
-docs/                           # spec + this handoff
+docs/                           # progress, decisions, architecture, release docs, state
 ```
 
 ## Architecture rules (non-negotiable)
@@ -79,20 +78,11 @@ docs/                           # spec + this handoff
    URLs with `assetUrl()` from `src/assets/assetUrl.ts`, and keep catalog paths
    relative (`assets/models/...`).
 
-## Current decisions / assumptions
+## Decisions
 
-- `world.startZone = 10` is even, so the starter grid is centred by offsetting
-  half a zone (`-startZone/2 .. startZone/2-1`), not by an odd centre cell.
-- The item catalog and starter inventory are intentionally empty (`items: []`,
-  `starter.items: []`) until the item list is decided. Per the brief, the tutorial's
-  drag step runs after "visit the shop" when there is no starter item.
-- The day background from `palette.background.day` is used until day/night exists.
-- The camera is **orthographic**. The `minZoom`/`maxZoom` values operate on an
-  orthographic camera's zoom.
-- Fonts are configured by family name only. Font files must be added to
-  `public/assets/fonts/`.
-- The config uses an explicit `: EvergrowConfig` annotation, so assigning a value of
-  the wrong type is a compile error.
+Resolved and open choices are logged in [`DECISIONS.md`](./DECISIONS.md). Add an
+entry there before changing a decision that affects architecture, data format,
+deployment or the product rules.
 
 ## Deployment
 
@@ -116,6 +106,15 @@ npm run lint     # oxlint
 npm run dev      # full-window canvas in the day background colour at "/"
 VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 ```
+
+## Release and community docs
+
+- `LICENSE` (MIT, copyright holder placeholder)
+- `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`, `SECURITY.md`
+- `CHANGELOG.md` (Keep a Changelog), `docs/RELEASING.md`
+- `docs/DECISIONS.md`, `docs/STATE.md`, `docs/ARCHITECTURE.md`
+- `.github/ISSUE_TEMPLATE/`, `PULL_REQUEST_TEMPLATE.md`, `dependabot.yml`
+- `.editorconfig`, `.nvmrc` (Node 20, matches CI)
 
 ## Git / auth notes
 
