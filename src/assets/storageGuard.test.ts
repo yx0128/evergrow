@@ -32,4 +32,13 @@ describe('storage guard', () => {
       }),
     ).toEqual(['after.ts'])
   })
+
+  it('does not treat URLs as comments', () => {
+    expect(
+      findStorageAccess({
+        'url.ts': "const u = 'https://a.example'; localStorage.setItem('k', 'v')",
+        'trailing.ts': 'const x = 1 // localStorage note',
+      }),
+    ).toEqual(['url.ts'])
+  })
 })

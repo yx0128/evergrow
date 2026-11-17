@@ -182,7 +182,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 32 tests (config, catalog, assets, UI, redirect)
+npm test         # 33 tests (config, catalog, assets, UI, redirect)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
@@ -234,3 +234,10 @@ Tests remain 31.
 - README documents the preview URL `http://localhost:4173/evergrow/`.
 
 Tests now total 32.
+
+### 2026-11-17 — storage guard URL fix
+
+- Line comments are only stripped when `//` starts a line or follows whitespace, so
+  URLs no longer hide storage access later on the same line.
+
+Tests now total 33.

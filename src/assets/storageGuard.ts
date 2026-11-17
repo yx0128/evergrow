@@ -2,7 +2,7 @@ const STORAGE_ACCESS = /\b(?:local|session)Storage\b/
 const ALLOWED = new Set(['assets/assetUrl.ts'])
 
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '')
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/gm, '$1')
 }
 
 /** Return files that bypass the storage helper with direct web storage access. */
