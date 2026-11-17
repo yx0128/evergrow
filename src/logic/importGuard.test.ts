@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-const modules = import.meta.glob('/src/logic/**/*.ts', {
+const modules = import.meta.glob('/src/logic/**/*.{ts,tsx}', {
   query: '?raw',
   import: 'default',
   eager: true,
@@ -38,7 +38,7 @@ function findForbiddenImports(files: Record<string, string>): string[] {
   const offenders: string[] = []
   for (const [path, content] of Object.entries(files)) {
     const relative = path.replace(/^\/?src\//, '')
-    if (relative.endsWith('.test.ts')) continue
+    if (relative.endsWith('.test.ts') || relative.endsWith('.test.tsx')) continue
     if (importSpecifiers(content).some(isForbidden)) offenders.push(relative)
   }
   return offenders

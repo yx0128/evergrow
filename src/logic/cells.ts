@@ -29,6 +29,8 @@ export interface LevelRange {
 }
 
 function levelReason(level: number): InvalidReason | null {
+  if (level === Infinity) return 'maxStack'
+  if (level === -Infinity) return 'minStack'
   if (!Number.isInteger(level)) return 'minStack'
   if (level > CONFIG.world.maxStack) return 'maxStack'
   if (level < MIN_LEVEL) return 'minStack'
@@ -89,10 +91,11 @@ export function setType(cells: CellMap, x: number, z: number, type: TileType): C
  * existing cells only change type and keep their level.
  */
 export function paint(cells: CellMap, x: number, z: number, type: TileType): CellResult {
+  if (!isInWorld(x, z)) return { ok: false, reason: 'outsideWorld' }
+
   const existing = cells.get(key(x, z))
   if (existing) return setType(cells, x, z, type)
 
-  if (!isInWorld(x, z)) return { ok: false, reason: 'outsideWorld' }
   if (!isBuildable(x, z, cells)) return { ok: false, reason: 'outsideBuildableZone' }
 
   return setCell(cells, { x, z, type, level: MIN_LEVEL })
@@ -103,6 +106,8 @@ export function paint(cells: CellMap, x: number, z: number, type: TileType): Cel
  * An empty cell is left unchanged.
  */
 export function digUp(cells: CellMap, x: number, z: number): CellResult {
+  if (!isInWorld(x, z)) return { ok: false, reason: 'outsideWorld' }
+
   const cellKey = key(x, z)
   const cell = cells.get(cellKey)
   if (!cell) return { ok: true, cells }

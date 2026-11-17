@@ -65,7 +65,8 @@ describe('setCell', () => {
       [MAX + 1, 'maxStack'],
       [NaN, 'minStack'],
       [2.5, 'minStack'],
-      [Infinity, 'minStack'],
+      [Infinity, 'maxStack'],
+      [-Infinity, 'minStack'],
     ]
     for (const [level, reason] of cases) {
       const cells = mapWith()
@@ -122,6 +123,8 @@ describe('setLevel', () => {
       [MAX + 1, 'maxStack'],
       [NaN, 'minStack'],
       [2.5, 'minStack'],
+      [Infinity, 'maxStack'],
+      [-Infinity, 'minStack'],
     ]
     const cells = mapWith(cell(0, 0, 'grass', 3))
     const before = [...cells]
@@ -182,6 +185,16 @@ describe('paint', () => {
     const cells = mapWith(cell(HALF_WORLD - 1, 0))
     expectFail(paint(cells, HALF_WORLD, 0, 'grass'), 'outsideWorld')
   })
+
+  it('returns outsideWorld for invalid coordinates without throwing', () => {
+    for (const [x, z] of [
+      [1.5, 0],
+      [NaN, 0],
+    ]) {
+      expect(() => paint(mapWith(), x, z, 'grass')).not.toThrow()
+      expectFail(paint(mapWith(), x, z, 'grass'), 'outsideWorld')
+    }
+  })
 })
 
 describe('digUp', () => {
@@ -207,6 +220,12 @@ describe('digUp', () => {
 
     expect(result.ok).toBe(true)
     expect(expectOk(result)).toBe(cells)
+  })
+
+  it('returns outsideWorld for invalid coordinates without throwing', () => {
+    expect(() => digUp(mapWith(), 0.5, 0)).not.toThrow()
+    expectFail(digUp(mapWith(), 0.5, 0), 'outsideWorld')
+    expectFail(digUp(mapWith(), NaN, 0), 'outsideWorld')
   })
 })
 

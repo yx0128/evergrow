@@ -184,7 +184,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 86 tests (config, catalog, assets, UI, redirect, grid, cells, purity, import guard)
+npm test         # 88 tests (config, catalog, assets, UI, redirect, grid, cells, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
@@ -218,17 +218,19 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   `MIN_LEVEL = 1` (§5.2), and
   `CellResult = { ok: true; cells: CellMap } | { ok: false; reason: InvalidReason }`.
 - `setCell(cells, cell)` and `setLevel(cells, x, z, level)` return `CellResult`.
-  A level must be an integer in `MIN_LEVEL..maxStack`: above → `maxStack`, below 1,
-  NaN, Infinity or a non-integer → `minStack` (new reason, "Minimum height reached").
+  A level must be an integer in `MIN_LEVEL..maxStack`: above → `maxStack`,
+  `+Infinity` → `maxStack`, and below 1, `−Infinity`, NaN or a non-integer →
+  `minStack` (new reason, "Minimum height reached").
   Rejected edits store nothing and leave the input untouched.
 - `removeCell(cells, x, z)` returns a new `CellMap`. `setType(cells, x, z, type)`
   returns `CellResult`. `setLevel`/`setType` on an empty cell return
   `{ ok: true, cells }` with the **same map** unchanged.
-- `paint(cells, x, z, type)`: existing cell → change type, keep level; empty cell →
-  `outsideWorld` if outside the cap, `outsideBuildableZone` if not buildable,
-  otherwise a new level-1 cell (§5.3).
-- `digUp(cells, x, z)`: level > 1 → level − 1; level 1 → remove; empty → unchanged
-  (`{ ok: true, cells }`).
+- `paint(cells, x, z, type)`: invalid or out-of-world coordinates → `outsideWorld`
+  before any lookup; existing cell → change type, keep level; empty cell →
+  `outsideBuildableZone` if not buildable, otherwise a new level-1 cell (§5.3).
+- `digUp(cells, x, z)`: invalid or out-of-world coordinates → `outsideWorld` before
+  any lookup; level > 1 → level − 1; level 1 → remove; empty in-world cell →
+  unchanged (`{ ok: true, cells }`).
 - `getLevelRange(x, z, cells)` → `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }`;
   `x/z/cells` are reserved for item-on-top limits (§6.4).
 - Nothing is clamped and no input map is ever mutated.
@@ -254,10 +256,11 @@ the same size afterwards.
 3. Covered cases: key/parse round trip and throwing; N/E/S/W neighbours; start-zone
    and world edges derived from `CONFIG`; 6 cells from a tile buildable and 7 not;
    outside `maxSize` rejected even inside the ring; single-cell `landBounds`;
-   level 1/`maxStack` accepted and 0/`maxStack+1`/NaN/2.5 rejected with the input
-   unchanged; paint create/type-change/outside-zone/outside-world; digUp 3→2, 1→
-   removed and empty unchanged; level range; input purity; no rendering/store imports.
-4. `npm test` (86), `npm run build`, `npm run lint`.
+   level 1/`maxStack` accepted and 0/`maxStack+1`/NaN/2.5/±Infinity rejected with the
+   input unchanged; paint create/type-change/outside-zone/outside-world and invalid
+   coordinates; digUp 3→2, 1→removed, empty unchanged and invalid coordinates; level
+   range; input purity; no rendering/store imports.
+4. `npm test` (88), `npm run build`, `npm run lint`.
 
 Still to do next: item checks (dig up under an item, `allowedTiles`), footprints,
 placement, commands, world store and rendering. Items, stores, commands and rendering
@@ -360,3 +363,15 @@ Tests remain 33.
   `npm run lint` pass.
 - Out of scope here: item checks (`allowedTiles`, dig up under an item), stores,
   commands and rendering.
+
+### 2026-11-17 — fix: tile tools handle invalid coordinates
+
+- `paint` and `digUp` now return `outsideWorld` for out-of-world, non-integer or NaN
+  coordinates before touching `key`, so a bad pointer raycast cannot throw. The
+  low-level helpers still throw (D019).
+- `levelReason` maps `+Infinity` to `maxStack` and `−Infinity` to `minStack`; NaN and
+  non-integers stay `minStack` (D020). Rejection tests cover both infinities.
+- The import guard glob now scans `.{ts,tsx}` under `src/logic` and skips `.test.ts`
+  and `.test.tsx`.
+- Tests: 86 → 88. `npm test`, `npm run build` (existing chunk warning) and
+  `npm run lint` pass.
