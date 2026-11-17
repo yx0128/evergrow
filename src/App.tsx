@@ -10,13 +10,15 @@ const unavailable = (
     role="alert"
     style={{ backgroundColor: CONFIG.palette.ui.surface }}
   >
-    <p className="app-fallback-title" style={{ color: CONFIG.palette.ui.text }}>
-      {CONFIG.appName}
-    </p>
-    <p style={{ color: CONFIG.palette.ui.text }}>{CONFIG.strings.webglUnavailable.title}</p>
-    <p style={{ color: CONFIG.palette.ui.textMuted }}>
-      {CONFIG.strings.webglUnavailable.body}
-    </p>
+    <div className="app-fallback-inner">
+      <p className="app-fallback-title" style={{ color: CONFIG.palette.ui.text }}>
+        {CONFIG.appName}
+      </p>
+      <p style={{ color: CONFIG.palette.ui.text }}>{CONFIG.strings.webglUnavailable.title}</p>
+      <p style={{ color: CONFIG.palette.ui.textMuted }}>
+        {CONFIG.strings.webglUnavailable.body}
+      </p>
+    </div>
   </div>
 )
 

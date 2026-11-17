@@ -33,12 +33,15 @@ body {
   position: absolute;
   inset: 0;
   display: grid;
-  place-content: center;
-  gap: 0.5rem;
-  max-width: 32rem;
-  margin: 0 auto;
+  place-items: center;
   padding: 2rem;
   text-align: center;
+}
+
+.app-fallback-inner {
+  display: grid;
+  gap: 0.5rem;
+  max-width: 32rem;
 }
 
 .app-fallback p {
