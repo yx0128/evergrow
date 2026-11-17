@@ -15,6 +15,7 @@ rendering or commands yet.
 - Work on a branch, never directly on main: step/<short-name> for a build step, fix/<short-name> for review fixes, docs/<short-name> for docs-only work.
 - Commit messages are a subject only: imperative, sentence case, no prefix, no body, no trailers (no Co-Authored-By). Record the what, why and verification in this file's log entry instead.
 - npm test, npm run build and npm run lint must pass before every commit.
+- Review sessions run npm run coverage and check src/logic for untested lines and branches. There is no coverage threshold.
 - Merge into main only after a review says READY, as one squash commit: git switch main && git merge --squash <branch> && git commit -m "<subject>", then git branch -D <branch> (-D because Git doesn't treat squash-merged branches as merged).
 - Don't rewrite commits already pushed to origin/main. Fix forward with a new commit.
 - Push main once per task, after the merge. GitHub Pages deploys every push to main.
@@ -198,6 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 npm test         # 88 tests (config, catalog, assets, UI, redirect, grid, cells, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
+npm run coverage   # line/branch coverage; HTML report in coverage/index.html
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
 VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 ```
@@ -395,3 +397,15 @@ Tests remain 33.
 - Added D021 and pointed the Git/auth notes at the rules.
 - Updated CONTRIBUTING's commit guidance to keep what/why/verification in PROGRESS.
 - Code unchanged. `npm test` (88), `npm run build` and `npm run lint` pass.
+
+### 2026-11-18 — fix: coverage tooling
+
+- Added `npm run coverage` (`vitest run --coverage`) with the already-installed
+  `@vitest/coverage-v8@5.1.0`, matching vitest 5.1.0.
+- Configured v8 coverage in `vite.config.ts`: all `src/**/*.{ts,tsx}`, excluding
+  test files, with text and HTML reporters and no thresholds. `coverage/` was
+  already ignored.
+- src/logic is at 100% statements, branches, functions and lines
+  (`catalog.ts`, `cells.ts`, `grid.ts`). Overall: 100% statements/lines,
+  98.95% branches; the only uncovered branch is `src/assets/redirect.ts` line 3.
+- No game code changed; 88 tests still pass.

@@ -27,6 +27,7 @@ when there is none.
 | D019 | 2026-11-17 | Accepted | Tile tools return Result; low-level helpers throw | `paint`/`digUp` return `{ ok: false, reason: 'outsideWorld' }` for out-of-world, non-integer or NaN coordinates instead of throwing. `key`, `getCell`, `setCell`, `setLevel`, `setType` and `removeCell` still throw through `key` on bad coordinates so programming errors fail loudly. Level edits return `CellResult` instead of clamping, and `setLevel`/`setType` on an empty cell return `{ ok: true, cells }` with the same map unchanged. |
 | D020 | 2026-11-17 | Accepted | Add the `minStack` invalid reason ("Minimum height reached") | A level below 1, NaN or a non-integer is outside §5.2's 1..`maxStack` range and needs a distinct message; reusing `maxStack` would tell the user the opposite. Levels above `maxStack` return `maxStack`; `+Infinity` is treated as above max, `−Infinity` as below min, and NaN/non-integers return `minStack`. |
 | D021 | 2026-11-18 | Accepted | Work on step/fix/docs branches and squash-merge into main after review | Keeps main reviewed and deployable (Pages deploys every push to main). Broken intermediate commits stay on the branch. No history rewriting on main. Rules live in PROGRESS.md "Workflow rules". |
+| D022 | 2026-11-18 | Accepted | Use @vitest/coverage-v8 as a review aid, with no threshold yet | Shows untested branches in pure logic; a threshold now would reward tests written to hit a number. Consider a src/logic-only threshold later. |
 
 ## Template
 

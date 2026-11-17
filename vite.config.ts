@@ -1,5 +1,6 @@
 import react from '@vitejs/plugin-react'
-import { defineConfig, type Plugin } from 'vite'
+import type { Plugin } from 'vite'
+import { defineConfig } from 'vitest/config'
 // Keep the app config Node-safe: no browser, React or three imports in that file.
 import { CONFIG } from './src/config/evergrow.config.ts'
 
@@ -43,4 +44,12 @@ export default defineConfig(({ command, isPreview }) => ({
     process.env.VITE_BASE_PATH ??
     (command === 'build' || isPreview ? `/${repoName}/` : '/'),
   plugins: [react(), htmlConfig, faviconPlugin],
+  test: {
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}'],
+      reporter: ['text', 'html'],
+    },
+  },
 }))
