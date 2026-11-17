@@ -22,6 +22,10 @@ when there is none.
 | D014 | 2026-11-17 | Accepted | No water/neighbour tile rules; every cell's height range is 1 to `maxStack` | Removes the fiddliest logic and blocked states for the demo; opaque water sides make raised water look intentional. Can be added later without breaking saves. |
 | D015 | 2026-11-17 | Accepted | Keep `allowedTiles` per item | Cheap check that prevents odd placements (e.g. a campfire on water) and drives `Tab` cycling and greyed-out tile options. |
 | D016 | 2026-11-17 | Accepted | Brief names no specific games as references | A generic "cozy 3D sandbox builders" description keeps the style direction without tying it to particular titles. |
+| D017 | 2026-11-17 | Accepted | Grid axes: +X is east, +Z is south, north is −Z | Matches the brief's `arm` pointing +Z and standard top-down x/z grids; keeps rotation and neighbour code unambiguous. |
+| D018 | 2026-11-17 | Accepted | Bounds use `min = -floor(size / 2)` | Consistent with D002: a 10×10 start zone covers −5..4 and a 256×256 world covers −128..127, all centred on the origin. |
+| D019 | 2026-11-17 | Accepted | Keys and coordinates throw; levels are rejected with a Result | `key` throws on non-integer coordinates and `parseKey` throws an Error naming a malformed key, so corrupted save data cannot be silently misread. Level edits return `CellResult` instead of clamping, making rejection explicit for the HUD. `setLevel`/`setType` on an empty cell return `{ ok: true, cells }` with the same map unchanged. |
+| D020 | 2026-11-17 | Accepted | Add the `minStack` invalid reason ("Minimum height reached") | A level below 1, NaN or a non-integer is outside §5.2's 1..`maxStack` range and needs a distinct message; reusing `maxStack` would tell the user the opposite. Levels above `maxStack` still return `maxStack`. |
 
 ## Template
 

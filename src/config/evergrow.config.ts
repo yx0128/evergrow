@@ -153,6 +153,7 @@ export type InvalidReason =
   | 'wrongTile'
   | 'unevenGround'
   | 'maxStack'
+  | 'minStack'
   | 'underItem'
   | 'unaffordable'
 
@@ -333,6 +334,7 @@ export const CONFIG: EvergrowConfig = {
       wrongTile: "This item can't go on that tile",
       unevenGround: 'Uneven ground',
       maxStack: 'Maximum height reached',
+      minStack: 'Minimum height reached',
       underItem: 'Store or move the item first',
       unaffordable: 'Not enough coins',
     },

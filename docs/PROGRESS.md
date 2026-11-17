@@ -5,8 +5,10 @@ Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
 
 ## Status
 
-Scaffold complete. Vite + React + TypeScript is installed, the typed config catalog
-exists, and a full-window orthographic R3F canvas renders the day background. No game features yet.
+Scaffold complete, plus pure world logic for grid coordinates, the buildable zone,
+tile cells and column levels. The typed config catalog exists and a full-window
+orthographic R3F canvas renders the day background. Logic is not wired to stores,
+rendering or commands yet.
 
 ## Log
 
@@ -182,12 +184,84 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 33 tests (config, catalog, assets, UI, redirect)
+npm test         # 86 tests (config, catalog, assets, UI, redirect, grid, cells, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run dev      # full-window orthographic canvas in the day background colour at "/"
 VITE_BASE_PATH=/evergrow/ npm run build   # override the Pages base if needed
 ```
+
+## World logic (grid & cells)
+
+Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
+
+### `src/logic/grid.ts`
+
+- `key(x, z)` → `"x,z"`; **throws** on non-integer coordinates.
+- `parseKey(s)` → `{x,z}`; **throws** an Error naming malformed keys (never returns null).
+- `DIRECTIONS` / `neighbour(x,z,dir)` / `neighbours(x,z)` (N, E, S, W order).
+  Axes: **+X east, +Z south, north = −Z**.
+- `boundsForSize(size)` uses `min = -floor(size/2)`, so 10 → −5..4 and 256 → −128..127.
+- `worldBounds()`, `startZoneBounds()`, `insideBounds()`, `isInWorld()`,
+  `isWithinStartZone()`. The checks return false for non-integer/NaN/Infinity input.
+- `chebyshevDistance(a, b)`.
+- `isBuildable(x, z, cells)`: inside the world cap **and** (inside the start zone
+  **or** within `buildableRing` Chebyshev cells of any existing tile). Returns false
+  for non-integer coordinates. §4.6.
+- `landBounds(cells)` → `{minX,maxX,minZ,maxZ}` or `null` for an empty world
+  (for camera bounds later).
+- `GridCells = ReadonlyMap<string, {x,z}>`, so `CellMap` is accepted structurally.
+
+### `src/logic/cells.ts`
+
+- `Cell { x, z, type, level }`, `CellMap = ReadonlyMap<string, Cell>`, `LevelRange`,
+  `MIN_LEVEL = 1` (§5.2), and
+  `CellResult = { ok: true; cells: CellMap } | { ok: false; reason: InvalidReason }`.
+- `setCell(cells, cell)` and `setLevel(cells, x, z, level)` return `CellResult`.
+  A level must be an integer in `MIN_LEVEL..maxStack`: above → `maxStack`, below 1,
+  NaN, Infinity or a non-integer → `minStack` (new reason, "Minimum height reached").
+  Rejected edits store nothing and leave the input untouched.
+- `removeCell(cells, x, z)` returns a new `CellMap`. `setType(cells, x, z, type)`
+  returns `CellResult`. `setLevel`/`setType` on an empty cell return
+  `{ ok: true, cells }` with the **same map** unchanged.
+- `paint(cells, x, z, type)`: existing cell → change type, keep level; empty cell →
+  `outsideWorld` if outside the cap, `outsideBuildableZone` if not buildable,
+  otherwise a new level-1 cell (§5.3).
+- `digUp(cells, x, z)`: level > 1 → level − 1; level 1 → remove; empty → unchanged
+  (`{ ok: true, cells }`).
+- `getLevelRange(x, z, cells)` → `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }`;
+  `x/z/cells` are reserved for item-on-top limits (§6.4).
+- Nothing is clamped and no input map is ever mutated.
+
+### `src/logic/importGuard.test.ts`
+
+Vitest-only guard. It reads every non-test `src/logic/**/*.ts` file raw and fails on
+any import or export-from of React, React DOM, `three`, `@react-three/*`, `zustand`,
+or anything under `store/` or `scene/`. Config and sibling logic imports stay allowed.
+It was verified by temporarily adding a `three` import and watching the test fail.
+
+### `src/logic/purity.test.ts`
+
+Calls every exported map function (`setCell`, `removeCell`, `setLevel`, `setType`,
+`paint`, `digUp`, `isBuildable`, `landBounds`, `getLevelRange`), snapshotting the
+input with `structuredClone([...map])` and asserting the input is deep-equal and
+the same size afterwards.
+
+### Reproduce this step
+
+1. Create `src/logic/grid.ts` and `src/logic/cells.ts` as above.
+2. Add `grid.test.ts`, `cells.test.ts`, `purity.test.ts` and `importGuard.test.ts`.
+3. Covered cases: key/parse round trip and throwing; N/E/S/W neighbours; start-zone
+   and world edges derived from `CONFIG`; 6 cells from a tile buildable and 7 not;
+   outside `maxSize` rejected even inside the ring; single-cell `landBounds`;
+   level 1/`maxStack` accepted and 0/`maxStack+1`/NaN/2.5 rejected with the input
+   unchanged; paint create/type-change/outside-zone/outside-world; digUp 3→2, 1→
+   removed and empty unchanged; level range; input purity; no rendering/store imports.
+4. `npm test` (86), `npm run build`, `npm run lint`.
+
+Still to do next: item checks (dig up under an item, `allowedTiles`), footprints,
+placement, commands, world store and rendering. Items, stores, commands and rendering
+were explicitly out of scope here.
 
 ## Release and community docs
 
@@ -253,3 +327,36 @@ Tests remain 33.
 
 - Tagged v0.1.0 and pushed; GitHub Pages deployed it.
 - Next milestone: 0.2.0 (world logic).
+
+### 2026-11-17 — world logic: grid and cells
+
+- Added `src/logic/grid.ts`: `key`/`parseKey`, N/E/S/W neighbours, world and start-zone
+  bounds (even sizes half a cell off the origin), Chebyshev distance, `isBuildable`,
+  and `landBounds`.
+- Added `src/logic/cells.ts`: `Cell`/`CellMap` types, pure `setCell`, `removeCell`,
+  `setLevel`, `setType` (always return new maps), level clamping and `getLevelRange`.
+- Added `grid.test.ts` (14 tests) and `cells.test.ts` (11 tests), including the brief's
+  buildable-zone cases: start zone, 6 cells from a tile true, 7 false, outside
+  `maxSize` false.
+- Added `imports.test.ts` (3 tests): a layering guard that fails if anything in
+  `src/logic` imports React, Three/R3F, Zustand, `store/` or `scene/`.
+- Decisions D017 (axes), D018 (bounds offset) and D019 (invalid-input handling).
+- Out of scope and still pending: items, footprints, placement, commands, stores,
+  rendering.
+- `npm test` 61/61, `npm run build` OK (existing chunk-size warning), `npm run lint` OK.
+
+### 2026-11-17 — fix: Result-based cell edits, paint and dig up
+
+- `key`/`parseKey` now throw on malformed input instead of silently returning.
+- `setCell`/`setLevel` reject out-of-range and non-integer levels with `CellResult`
+  reasons (`maxStack`, new `minStack`) instead of clamping; config strings gained
+  "Minimum height reached".
+- `CellMap` is `ReadonlyMap`; `setCell` takes a `Cell` object; `isWithinWorld` became
+  `isInWorld`; empty-cell `setLevel`/`setType` return ok with the same map.
+- Added `paint` and `digUp` (§5.3), `MIN_LEVEL`, and single-source level validation.
+- Added `purity.test.ts` (13 tests) and renamed the guard to `importGuard.test.ts`
+  (3 tests); confirmed it fails with a temporary `three` import.
+- Tests: 61 → 86. `npm test`, `npm run build` (existing chunk warning) and
+  `npm run lint` pass.
+- Out of scope here: item checks (`allowedTiles`, dig up under an item), stores,
+  commands and rendering.
