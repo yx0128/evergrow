@@ -5,16 +5,14 @@ import type { ItemDef, Quality, TileType } from './evergrow.config'
 const TILE_TYPES: TileType[] = ['grass', 'land', 'water']
 
 describe('evergrow config', () => {
-  it('has sane world bounds', () => {
-    expect(config.world.maxSize).toBeGreaterThan(0)
-    expect(config.world.maxSize).toBeLessThanOrEqual(512)
-    expect(config.world.startZone).toBeGreaterThanOrEqual(1)
-    expect(config.world.startZone % 2).toBe(0)
-    expect(config.world.buildableRing).toBeGreaterThanOrEqual(0)
-    expect(config.world.maxStack).toBeGreaterThanOrEqual(1)
-    expect(config.world.maxStack).toBeLessThanOrEqual(64)
+  it('has the brief-fixed world bounds', () => {
+    expect(config.appName.length).toBeGreaterThan(0)
+    expect(config.world.maxSize).toBe(256)
+    expect(config.world.startZone).toBe(10)
+    expect(config.world.buildableRing).toBe(6)
+    expect(config.world.maxStack).toBe(8)
     expect(config.world.tileThickness).toBeGreaterThan(0)
-    expect(config.world.waterMaxStep).toBeGreaterThanOrEqual(0)
+    expect(config.world.waterMaxStep).toBe(1)
     expect(config.world.chunkSize).toBeGreaterThan(0)
   })
 
@@ -27,10 +25,9 @@ describe('evergrow config', () => {
     expect(taskReward.medium).toBeLessThan(taskReward.big)
     expect(subtaskShare).toBeGreaterThan(0)
     expect(subtaskShare).toBeLessThanOrEqual(1)
-    expect(sellRefund).toBeGreaterThanOrEqual(0)
-    expect(sellRefund).toBeLessThanOrEqual(1)
-    expect(tileCost).toBeGreaterThanOrEqual(0)
-    expect(typeof allowNegativeCoins).toBe('boolean')
+    expect(sellRefund).toBe(1)
+    expect(tileCost).toBe(0)
+    expect(allowNegativeCoins).toBe(false)
   })
 
   it('has valid focus session defaults', () => {
@@ -46,16 +43,22 @@ describe('evergrow config', () => {
     expect(pomodoro.coinsPerBlock).toBeGreaterThanOrEqual(0)
   })
 
-  it('keeps camera limits ordered and above the ground', () => {
+  it('keeps the brief camera limits', () => {
     const { camera } = config
-    expect(camera.minPolarDeg).toBeGreaterThan(0)
+    expect(camera.minPolarDeg).toBe(20)
+    expect(camera.maxPolarDeg).toBe(80)
     expect(camera.minPolarDeg).toBeLessThan(camera.maxPolarDeg)
     expect(camera.maxPolarDeg).toBeLessThan(90)
     expect(camera.minZoom).toBeGreaterThan(0)
     expect(camera.minZoom).toBeLessThan(camera.maxZoom)
+    expect(camera.defaultZoom).toBeGreaterThan(camera.minZoom)
+    expect(camera.defaultZoom).toBeLessThan(camera.maxZoom)
+    const [x, y, z] = camera.homePosition
+    const polar = (Math.acos(y / Math.hypot(x, y, z)) * 180) / Math.PI
+    expect(polar).toBeGreaterThanOrEqual(camera.minPolarDeg)
+    expect(polar).toBeLessThanOrEqual(camera.maxPolarDeg)
     expect(camera.transitionMs).toBeGreaterThan(0)
-    expect(camera.snapRotateDeg).toBeGreaterThan(0)
-    expect(camera.snapRotateDeg % 90).toBe(0)
+    expect(camera.snapRotateDeg).toBe(90)
   })
 
   it('has sane motion timings', () => {
@@ -63,11 +66,13 @@ describe('evergrow config', () => {
     expect(motion.dropFadeMs).toBeGreaterThanOrEqual(0)
     expect(motion.digUpFadeMs).toBeGreaterThanOrEqual(0)
     expect(motion.tileAddFadeMs).toBeGreaterThanOrEqual(0)
-    expect(motion.coinCountUpMs).toBeGreaterThanOrEqual(0)
+    expect(motion.coinCountUpMs).toBeGreaterThanOrEqual(350)
+    expect(motion.coinCountUpMs).toBeLessThanOrEqual(450)
     expect(motion.gridFadeMs).toBeGreaterThanOrEqual(0)
-    expect(motion.panelMs).toBeGreaterThanOrEqual(0)
+    expect(motion.panelMs).toBeGreaterThanOrEqual(150)
+    expect(motion.panelMs).toBeLessThanOrEqual(200)
     expect(motion.ghostLerpMs).toBeGreaterThanOrEqual(0)
-    expect(motion.ghostLerpMs).toBeLessThanOrEqual(120)
+    expect(motion.ghostLerpMs).toBeLessThanOrEqual(60)
     expect(motion.ghostOpacity).toBeGreaterThan(0)
     expect(motion.ghostOpacity).toBeLessThan(1)
   })
@@ -84,7 +89,7 @@ describe('evergrow config', () => {
   it('has sane rendering settings', () => {
     const { rendering } = config
     expect(rendering.shadowMapSize).toBeGreaterThan(0)
-    expect(rendering.maxPointLights).toBeGreaterThanOrEqual(0)
+    expect(rendering.maxPointLights).toBe(8)
     expect(rendering.pixelRatioCap).toBeGreaterThan(0)
     expect(['high', 'low']).toContain(rendering.quality)
     expect(typeof rendering.bloom).toBe('boolean')
@@ -100,27 +105,10 @@ describe('evergrow config', () => {
     expect(config.tiles.land.transparent).toBe(false)
   })
 
-  it('has a valid, unique item catalog', () => {
-    const ids = new Set<string>()
-    for (const item of config.items) {
-      expect(item.id.length).toBeGreaterThan(0)
-      expect(ids.has(item.id)).toBe(false)
-      ids.add(item.id)
-      expect(item.price).toBeGreaterThanOrEqual(0)
-      expect(item.footprint[0]).toBeGreaterThanOrEqual(1)
-      expect(item.footprint[1]).toBeGreaterThanOrEqual(1)
-      expect(TILE_TYPES).toContain(item.defaultTile)
-      expect(item.allowedTiles.length).toBeGreaterThan(0)
-      expect(item.allowedTiles).toContain(item.defaultTile)
-      if (item.connectable) expect(item.rotatable).toBe(false)
-    }
-  })
-
-  it('starts with zero coins and only known starter items', () => {
-    expect(config.starter.coins).toBeGreaterThanOrEqual(0)
-    expect(config.starter.items.length).toBeLessThanOrEqual(1)
-    const ids = new Set(config.items.map((item) => item.id))
-    for (const id of config.starter.items) expect(ids.has(id)).toBe(true)
+  it('ships with an intentionally empty catalog and starter item', () => {
+    expect(config.items).toHaveLength(0)
+    expect(config.starter.items).toHaveLength(0)
+    expect(config.starter.coins).toBe(0)
   })
 
   it('has valid Hex colours', () => {
