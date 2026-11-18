@@ -224,7 +224,8 @@ CI runs `npm run lint`, `npm test` and `npm run build` on every pull request
 
 ## World logic (grid & cells)
 
-Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
+Pure modules, no React/Three/DOM imports. They import `CONFIG` only. Shared test
+fixtures live in `src/logic/testing/` and are excluded from coverage.
 
 ### `src/logic/catalog.ts`
 
@@ -964,3 +965,27 @@ Verification:
 - `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
   warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
+
+### 2026-11-18 — fix: share test fixtures and split large test files
+
+Done:
+
+- Added shared `item`, `cell`, `mapWith`, `placed`, `itemsOf` and `catalogOf` helpers
+  in `src/logic/testing/`, plus command, placement and cell fixtures.
+- Split `commands.test.ts` into place, items, tiles, history, batch, batch-edge and
+  gap files; moved the D014 block out of `cells.test.ts` and the `validatePlacement`
+  blocks out of `placement.test.ts`.
+- Reused the shared fixtures in `connect`, `footprint` and `purity` tests, and
+  excluded `src/logic/testing/**` from coverage in `vite.config.ts`.
+
+Why: several test files had grown past 300 lines and repeated the same helpers.
+
+Verification:
+
+- Before/after Vitest JSON reports have identical test names (261 tests).
+- `git diff --stat main -- src ':!src/logic/*.test.ts' ':!src/logic/testing'` is
+  empty and every `src/logic/*.test.ts` file is under 300 lines.
+- `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines;
+  no `src/logic/testing/` file appears in the report.

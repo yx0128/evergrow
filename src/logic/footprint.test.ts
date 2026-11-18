@@ -1,19 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import type { ItemDef, Rotation } from '../config/evergrow.config'
+import type { Rotation } from '../config/evergrow.config'
 import { getFootprintCells, rotatedSize } from './footprint'
-
-const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): ItemDef => ({
-  name: overrides.id,
-  category: 'test',
-  price: 0,
-  defaultTile: 'grass',
-  allowedTiles: ['grass', 'land'],
-  connectable: false,
-  model: `assets/models/${overrides.id}.glb`,
-  thumb: `assets/thumbs/${overrides.id}.png`,
-  emissive: false,
-  ...overrides,
-})
+import { item } from './testing/fixtures'
 
 const lamp = item({ id: 'lamp', footprint: [1, 1] })
 const cottage = item({ id: 'cottage', footprint: [2, 2], allowedTiles: ['grass', 'land'] })

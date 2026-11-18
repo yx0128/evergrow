@@ -1,39 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import type { ItemDef } from '../config/evergrow.config'
 import { affectedByChange, getConnectionMask } from './connect'
 import { key } from './grid'
-import type { Occupancy, PlacedItem, PlacedItems } from './placement'
-
-const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): ItemDef => ({
-  name: overrides.id,
-  category: 'test',
-  price: 0,
-  defaultTile: 'grass',
-  allowedTiles: ['grass', 'land'],
-  connectable: false,
-  model: `assets/models/${overrides.id}.glb`,
-  thumb: `assets/thumbs/${overrides.id}.png`,
-  emissive: false,
-  ...overrides,
-})
+import type { Occupancy, PlacedItems } from './placement'
+import { catalogOf, item, itemsOf, placed } from './testing/fixtures'
 
 const fenceDef = item({ id: 'fence', footprint: [1, 1], connectable: true })
 const lampDef = item({ id: 'lamp', footprint: [1, 1] })
-const catalog = new Map<string, ItemDef>([
-  [fenceDef.id, fenceDef],
-  [lampDef.id, lampDef],
-])
-
-const placed = (uid: string, def: ItemDef, x: number, z: number): PlacedItem => ({
-  uid,
-  id: def.id,
-  x,
-  z,
-  rot: 0,
-})
-
-const itemsOf = (...list: ReadonlyArray<PlacedItem>): PlacedItems =>
-  new Map(list.map((it) => [it.uid, it]))
+const catalog = catalogOf(fenceDef, lampDef)
 
 const occupancyOf = (items: PlacedItems): Occupancy =>
   new Map([...items.values()].map((item) => [key(item.x, item.z), item.uid]))

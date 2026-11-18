@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CONFIG, type ItemDef } from '../config/evergrow.config'
+import { CONFIG } from '../config/evergrow.config'
 import { digUp, paint, setCell, setLevel, setType } from './cells'
 import type { CellMap } from './cells'
 import {
@@ -25,6 +25,7 @@ import {
   validatePlacement,
   type PlacedItems,
 } from './placement'
+import { catalogOf, item } from './testing/fixtures'
 
 const MAX = CONFIG.world.maxStack
 
@@ -55,27 +56,9 @@ function expectDeepPure<T>(make: () => T, run: (value: T) => unknown): void {
   expect(value).toEqual(before)
 }
 
-const item = (
-  overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>,
-): ItemDef => ({
-  name: overrides.id,
-  category: 'test',
-  price: 0,
-  defaultTile: 'grass',
-  allowedTiles: ['grass', 'land'],
-  connectable: false,
-  model: `assets/models/${overrides.id}.glb`,
-  thumb: `assets/thumbs/${overrides.id}.png`,
-  emissive: false,
-  ...overrides,
-})
-
 const cottage = item({ id: 'cottage', footprint: [2, 2] })
 const lamp = item({ id: 'lamp', footprint: [1, 1] })
-const catalog = new Map<string, ItemDef>([
-  [cottage.id, cottage],
-  [lamp.id, lamp],
-])
+const catalog = catalogOf(cottage, lamp)
 const items: PlacedItems = new Map([
   ['a', { uid: 'a', id: 'cottage', x: 0, z: 0, rot: 0 }],
   ['b', { uid: 'b', id: 'lamp', x: 5, z: 5, rot: 0 }],
