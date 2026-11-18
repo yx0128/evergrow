@@ -87,7 +87,8 @@ export function validatePlacement(
     }
   }
 
-  if (!item.allowedTiles.includes(autoTile)) {
+  const needsAutoTile = footprint.some((p) => !state.cells.has(key(p.x, p.z)))
+  if (needsAutoTile && !item.allowedTiles.includes(autoTile)) {
     return { ok: false, reason: 'wrongTile' }
   }
   for (const point of footprint) {

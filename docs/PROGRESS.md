@@ -783,3 +783,24 @@ Verification:
 - The named temporary bug (deleting a raised column beside water) made the strengthened
   test fail as expected, then the code was restored. `git diff main -- src/logic/cells.ts`
   is empty.
+
+### 2026-11-18 — fix: check the auto tile only when a cell needs one
+
+Done:
+
+- `validatePlacement` now requires `autoTile` in `item.allowedTiles` only when at least
+  one footprint cell is empty; when every footprint cell already has allowed ground the
+  auto tile is ignored (§6.3, D015). The check order and every other rule are unchanged.
+- Added `placement.test.ts` tests for a disallowed auto tile over fully covered ground
+  (accepted, no auto tiles) and a partly empty footprint (rejected with `wrongTile`).
+
+Why: a disallowed `autoTile` was rejected even when no auto tile would be created, so a
+valid placement could fail with `wrongTile`.
+
+Verification:
+
+- `npm test` 248 → 250 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- Both temporary mutations were applied and restored on their own: `some` → `every`
+  failed the partial-footprint test, and `needsAutoTile &&` → `false &&` failed the
+  auto-tile and partial-footprint tests.

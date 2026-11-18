@@ -174,6 +174,16 @@ describe('validatePlacement', () => {
     expect(result).toEqual({ ok: false, reason: 'wrongTile' })
   })
 
+  it('accepts a disallowed auto tile when every cell already has allowed ground', () => {
+    expect(validatePlacement(lamp, 0, 0, 0, 'land', stateOf(itemsOf(), mapWith(cell(0, 0)))))
+      .toEqual({ ok: true, autoTiles: [] })
+  })
+
+  it('rejects a disallowed auto tile when part of the footprint is empty', () => {
+    expect(validatePlacement(cottage, 0, 0, 0, 'water', stateOf(itemsOf(), mapWith(cell(0, 0)))))
+      .toEqual({ ok: false, reason: 'wrongTile' })
+  })
+
   it('returns wrongTile when an existing cell type is not allowed', () => {
     const result = validatePlacement(
       lamp,
