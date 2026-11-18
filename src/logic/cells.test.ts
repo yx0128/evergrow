@@ -9,7 +9,6 @@ import {
   digUp,
   getCell,
   getLevelRange,
-  MIN_LEVEL,
   paint,
   removeCell,
   setCell,
@@ -23,6 +22,7 @@ import { buildOccupancy, type PlacedItem, type PlacedItems } from './placement'
 const HALF_WORLD = CONFIG.world.maxSize / 2
 const HALF_START = CONFIG.world.startZone / 2
 const MAX = CONFIG.world.maxStack
+const MIN = CONFIG.world.minStack
 
 const cell = (
   x: number,
@@ -59,7 +59,7 @@ describe('setCell', () => {
   })
 
   it('accepts level 1 and maxStack', () => {
-    expect(expectOk(setCell(mapWith(), cell(0, 0, 'grass', MIN_LEVEL))).size).toBe(1)
+    expect(expectOk(setCell(mapWith(), cell(0, 0, 'grass', MIN))).size).toBe(1)
     expect(expectOk(setCell(mapWith(), cell(0, 0, 'grass', MAX))).size).toBe(1)
   })
 
@@ -135,8 +135,8 @@ describe('removeCell', () => {
 describe('setLevel', () => {
   it('accepts level 1 and maxStack', () => {
     const cells = mapWith(cell(-2, 4, 'water', 2))
-    expect(getCell(expectOk(setLevel(cells, -2, 4, MIN_LEVEL)), -2, 4)?.level).toBe(
-      MIN_LEVEL,
+    expect(getCell(expectOk(setLevel(cells, -2, 4, MIN)), -2, 4)?.level).toBe(
+      MIN,
     )
     expect(getCell(expectOk(setLevel(cells, -2, 4, MAX)), -2, 4)?.level).toBe(MAX)
   })
@@ -226,7 +226,7 @@ describe('setType', () => {
 describe('paint', () => {
   it('creates a level-1 cell in the start zone', () => {
     const result = paint(mapWith(), 0, 0, 'water')
-    expect(getCell(expectOk(result), 0, 0)).toEqual(cell(0, 0, 'water', MIN_LEVEL))
+    expect(getCell(expectOk(result), 0, 0)).toEqual(cell(0, 0, 'water', MIN))
   })
 
   it('changes type but keeps the level of an existing cell', () => {
@@ -285,7 +285,7 @@ describe('digUp', () => {
   })
 
   it('removes the cell at level 1', () => {
-    const cells = mapWith(cell(1, 1, 'land', MIN_LEVEL))
+    const cells = mapWith(cell(1, 1, 'land', MIN))
     const next = expectOk(digUp(cells, 1, 1))
 
     expect(next.has(key(1, 1))).toBe(false)
@@ -337,9 +337,9 @@ describe('getLevelRange', () => {
   ): PlacedItem => ({ uid, id: def.id, x, z, rot })
   const itemsOf = (...list: ReadonlyArray<PlacedItem>): PlacedItems =>
     new Map(list.map((it) => [it.uid, it]))
-  const range = { min: MIN_LEVEL, max: MAX }
+  const range = { min: MIN, max: MAX }
 
-  it('returns minLevel..maxStack for empty and filled cells (§5.4)', () => {
+  it('returns minStack..maxStack for empty and filled cells (§5.4)', () => {
     const empty = itemsOf()
     expect(
       getLevelRange(0, 0, { cells: mapWith(), occupancy: new Map(), items: empty }, catalog),
@@ -486,7 +486,7 @@ describe('no water or neighbour rules (D014)', () => {
     const cells = mapWith(cell(0, 0, 'land', MAX))
 
     expect(getCell(expectOk(paint(cells, 1, 0, 'water')), 1, 0)).toEqual(
-      cell(1, 0, 'water', MIN_LEVEL),
+      cell(1, 0, 'water', MIN),
     )
   })
 
@@ -512,7 +512,7 @@ describe('no water or neighbour rules (D014)', () => {
 
   it('tile edits ignore every neighbour type, direction and height', () => {
     const types: TileType[] = ['grass', 'land', 'water']
-    const heights = [MIN_LEVEL, MAX]
+    const heights = [MIN, MAX]
 
     for (const type of types) {
       for (const neighbourType of types) {
@@ -527,12 +527,12 @@ describe('no water or neighbour rules (D014)', () => {
                 expect(getCell(expectOk(setLevel(both, 0, 0, target)), 0, 0)?.level).toBe(target)
               }
               expect(getCell(expectOk(paint(mapWith(near), 0, 0, type)), 0, 0)).toEqual(
-                cell(0, 0, type, MIN_LEVEL),
+                cell(0, 0, type, MIN),
               )
-              expect(getCell(expectOk(digUp(both, 0, 0)), 0, 0)?.level).toBe(height === MIN_LEVEL ? undefined : height - 1)
+              expect(getCell(expectOk(digUp(both, 0, 0)), 0, 0)?.level).toBe(height === MIN ? undefined : height - 1)
               expect(
                 getLevelRange(0, 0, { cells: both, occupancy: new Map(), items: new Map() }, new Map()),
-              ).toEqual({ min: MIN_LEVEL, max: MAX })
+              ).toEqual({ min: MIN, max: MAX })
             }
           }
         }

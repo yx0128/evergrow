@@ -45,9 +45,11 @@ npm run dev
 ### Architecture rules
 1. **Logic is separate from rendering.** All world rules (grid, cells, stacking, footprints, validation, economy) live in pure TypeScript modules with no Three.js or React imports. Rendering reads state and draws it.
 2. **All configurable values live in one file:** `src/config/evergrow.config.ts` (see §14). No hard-coded numbers elsewhere.
-3. **All world mutations go through a command system** (`place`, `move`, `rotate`, `remove`, `paint`, `setLevel`, `digUp`) so undo/redo works uniformly.
+3. **All world mutations go through a command system** (`place`, `move`, `rotate`, `store`, `sell`, `paint`, `setLevel`, `digUp`) so undo/redo works uniformly.
 4. **Never store absolute Y positions.** Y is always derived: `level × tileThickness`.
 5. **Pure logic has unit tests** (Vitest) before it is wired to rendering.
+
+> Updated by D036: `store` and `sell` replace `remove`.
 
 ### Suggested folder structure
 ```
@@ -160,8 +162,10 @@ User picks between two modes:
 
 ### 4.8 Undo / redo
 - `Ctrl+Z` / `Ctrl+Shift+Z` (and `Ctrl+Y`).
-- Covers world commands only (place, move, rotate, remove, paint, setLevel, digUp, sell, store).
+- Covers world commands only (place, move, rotate, paint, setLevel, digUp, sell, store).
 - Task completion has "Undo complete" (§4.1).
+
+> Updated by D036: `store` and `sell` replace `remove`.
 
 ### 4.9 Save
 - Autosave to localStorage after every change (debounced ~500ms).
@@ -306,7 +310,7 @@ Actions
 
 ## 9. Motion rules
 - Item drop: 120ms fade from ghost opacity to solid
-- Dig up (item or tile): 120ms fade from solid to transparent, then removed
+- Dig up a tile, or store or sell an item: 120ms fade from solid to transparent, then removed
 - Coin wallet: Count up/down over ~400ms.
 - Grid lines: 150ms fade in/out
 - Ghost: Instant cell-to-cell or ≤60ms lerp
@@ -405,11 +409,12 @@ Price tiers (guide): small plants 5–15 · larger plants/props 20–40 · build
 All tunable values live in `src/config/evergrow.config.ts`. This is the list of settings it holds; the exact names and values are defined in the code.
 
 - **fonts:** title (app name only), heading, body
-- **economy:** taskReward, subtaskShare, tileCost, allowNegativeCoins
+- **economy:** taskReward, subtaskShare
+  > Updated by D035: tiles are always free and coins can't go negative, so neither is a setting.
 - **focus**
   - free: coinsPerBlock, blockMinutes, minMinutes
   - pomodoro: focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, coinsPerBlock
-- **world:** maxSize, startZone, buildableRing, maxStack, tileThickness (fixed), chunkSize, cameraBoundsMargin
+- **world:** maxSize, startZone, buildableRing, maxStack, minStack, tileThickness (fixed), chunkSize, cameraBoundsMargin
 - **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
 - **motion:** dropFadeMs, digUpFadeMs, tileAddFadeMs, coinCountUpMs, gridFadeMs, panelMs, ghostLerpMs, ghostOpacity
 - **dayNight:** useLocalTime, keyframes (dawn, day, dusk, night)

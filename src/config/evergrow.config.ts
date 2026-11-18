@@ -18,8 +18,6 @@ export interface EconomyConfig {
   readonly taskReward: Readonly<Record<TaskSize, number>>
   /** Fraction of the parent reward shared across subtasks; each subtask is paid when completed. */
   readonly subtaskShare: number
-  readonly tileCost: number
-  readonly allowNegativeCoins: boolean
 }
 
 export interface FocusConfig {
@@ -42,6 +40,7 @@ export interface WorldConfig {
   readonly startZone: number
   readonly buildableRing: number
   readonly maxStack: number
+  readonly minStack: number
   readonly tileThickness: number
   readonly chunkSize: number
   readonly cameraBoundsMargin: number
@@ -209,8 +208,6 @@ export const CONFIG: EvergrowConfig = {
       big: 30,
     },
     subtaskShare: 0.6,
-    tileCost: 0,
-    allowNegativeCoins: false,
   },
 
   focus: {
@@ -233,6 +230,7 @@ export const CONFIG: EvergrowConfig = {
     startZone: 10,
     buildableRing: 6,
     maxStack: 8,
+    minStack: 1,
     tileThickness: 1,
     chunkSize: 16,
     cameraBoundsMargin: 4,

@@ -41,6 +41,8 @@ when there is none.
 | D032 | 2026-11-18 | Accepted | History keeps the last `CONFIG.history.limit` steps (default 50); one drag stroke is one step (batch) | Caps memory, since each step stores a world snapshot. Grouping strokes makes the limit count player actions, not cells. The UI collects a stroke between pointer-down and pointer-up and passes it to `executeBatch`. |
 | D033 | 2026-11-18 | Accepted | Every item can rotate; there is no `rotatable` flag | Player choice; square footprints (D028) mean rotation never changes the covered cells. Connectable arms follow same-item neighbours in world directions (D025), so rotating a connectable item turns only its post. Overrides BRIEF §6.1, §6.4 and §6.5. |
 | D034 | 2026-11-18 | Open | Whether commands that change nothing should create an undo step | Digging an empty cell or painting a tile its current type currently adds a history entry, so undo can appear to do nothing. Decide when the paint and dig up tools are built. |
+| D035 | 2026-11-18 | Accepted | Remove the `tileCost` and `allowNegativeCoins` settings | Nothing read them; free tiles (§4.3) and never-negative coins (§4.1) are fixed rules. Overrides BRIEF §14. |
+| D036 | 2026-11-18 | Accepted | No `remove` command; `store` and `sell` replace it | The brief never defined `remove`, and the item popover (§6.4) only offers Store and Sell. Overrides BRIEF §2, §4.8 and §9. |
 
 ## Template
 

@@ -177,7 +177,7 @@ docs/                           # progress, decisions, architecture, release doc
 1. World rules (grid, cells, stacking, footprints, validation, economy) are pure TS
    in `src/logic/` with no Three.js or React imports. Unit-test before wiring UI.
 2. All tunables live in `src/config/evergrow.config.ts`. No magic numbers elsewhere.
-3. All world mutations go through commands (`place`, `move`, `rotate`, `remove`,
+3. All world mutations go through commands (`place`, `move`, `rotate`,
    `paint`, `setLevel`, `digUp`, `sell`, `store`) so undo/redo is uniform.
 4. Never store absolute Y. Derive it as `level * world.tileThickness`.
 5. Autosave to localStorage, debounced with `ui.autosaveDebounceMs`, including
@@ -253,12 +253,11 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 ### `src/logic/cells.ts`
 
 - `Cell { x, z, type, level }`, `CellMap = ReadonlyMap<string, Cell>`, `LevelRange`,
-  `MIN_LEVEL = 1` (§5.2), and
-  `CellResult = { ok: true; cells: CellMap } | { ok: false; reason: InvalidReason }`.
+  and `CellResult = { ok: true; cells: CellMap } | { ok: false; reason: InvalidReason }`.
 - `setCell(cells, cell)` and `setLevel(cells, x, z, level)` return `CellResult`.
-  A level must be an integer in `MIN_LEVEL..maxStack`: above → `maxStack`,
-  `+Infinity` → `maxStack`, and below 1, `−Infinity`, NaN or a non-integer →
-  `minStack` (new reason, "Minimum height reached").
+  A level must be an integer in `CONFIG.world.minStack..maxStack`: above → `maxStack`,
+  `+Infinity` → `maxStack`, and below `CONFIG.world.minStack`, `−Infinity`, NaN or a
+  non-integer → `minStack` (new reason, "Minimum height reached").
   Rejected edits store nothing and leave the input untouched.
 - `removeCell(cells, x, z)` returns a new `CellMap`. `setType(cells, x, z, type)`
   returns `CellResult`. `setLevel`/`setType` on an empty cell return
@@ -271,9 +270,9 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   unchanged (`{ ok: true, cells }`).
 - `getLevelRange(x, z, world, catalog)` → `LevelRange | null`, where
   `world = { cells, occupancy, items }` and all parameters are required. It returns
-  `{ min: MIN_LEVEL, max: CONFIG.world.maxStack }` for bare tiles and `null` under
-  any item (tile settings come from the item, D029). An occupancy uid with no item,
-  or an item id missing from the catalog, throws.
+  `{ min: CONFIG.world.minStack, max: CONFIG.world.maxStack }` for bare tiles and
+  `null` under any item (tile settings come from the item, D029). An occupancy uid
+  with no item, or an item id missing from the catalog, throws.
 - Nothing is clamped and no input map is ever mutated.
 
 ### `src/logic/footprint.ts`
@@ -844,3 +843,29 @@ Verification:
   and dig up commands creating an undo step.
 - Added D034 for the open question about no-op commands creating undo steps.
 - No code or tests changed. `npm test` (273), `npm run build` and `npm run lint` pass.
+
+### 2026-11-18 — fix: settle economy, remove and minimum level rules
+
+Done:
+
+- Removed the unused `tileCost` and `allowNegativeCoins` settings from `EconomyConfig`,
+  `CONFIG.economy` and their config assertions (D035).
+- Recorded that there is no `remove` command: `store` and `sell` replace it in
+  BRIEF §2, §4.8 and §9, the PROGRESS architecture rule and D036.
+- Moved the minimum level into config: added `CONFIG.world.minStack` (1) next to
+  `maxStack`, removed the exported `MIN_LEVEL` from `src/logic/cells.ts`, and used
+  `CONFIG.world.minStack` in `cells.ts`, `placement.ts` and `cells.test.ts`.
+- Renamed the leftover `minLevel` test title and rewrapped the `getLevelRange` notes.
+
+Why: a code-health review found two economy settings nothing read, an undefined
+`remove` command in the brief, and a hard-coded minimum level that broke §2's
+config-only rule.
+
+Verification:
+
+- `git grep -nE 'tileCost|allowNegativeCoins|MIN_LEVEL' -- src` and
+  `git grep -n "kind: 'remove'" -- src` return nothing.
+- `npm test` remains 273/273 tests; `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines.

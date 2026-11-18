@@ -1,6 +1,12 @@
-import type { InvalidReason, ItemDef, Rotation, TileType } from '../config/evergrow.config'
+import {
+  CONFIG,
+  type InvalidReason,
+  type ItemDef,
+  type Rotation,
+  type TileType,
+} from '../config/evergrow.config'
 import { itemDefinition } from './catalog'
-import { MIN_LEVEL, type Cell, type CellMap } from './cells'
+import type { Cell, CellMap } from './cells'
 import { getFootprintCells } from './footprint'
 import { isBuildable, isInWorld, key } from './grid'
 
@@ -101,7 +107,7 @@ export function validatePlacement(
   let level: number | undefined
   for (const point of footprint) {
     const cell = state.cells.get(key(point.x, point.z))
-    const cellLevel = cell?.level ?? MIN_LEVEL
+    const cellLevel = cell?.level ?? CONFIG.world.minStack
     if (level === undefined) level = cellLevel
     if (level !== cellLevel) return { ok: false, reason: 'unevenGround' }
   }
@@ -109,7 +115,7 @@ export function validatePlacement(
   const autoTiles: Cell[] = []
   for (const point of footprint) {
     if (!state.cells.has(key(point.x, point.z))) {
-      autoTiles.push({ x: point.x, z: point.z, type: autoTile, level: MIN_LEVEL })
+      autoTiles.push({ x: point.x, z: point.z, type: autoTile, level: CONFIG.world.minStack })
     }
   }
 

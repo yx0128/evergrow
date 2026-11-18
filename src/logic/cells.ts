@@ -8,9 +8,6 @@ import { itemDefinition } from './catalog'
 import { isBuildable, isInWorld, key } from './grid'
 import type { Occupancy, PlacedItems } from './placement'
 
-/** Brief §5.2: every column's level is 1..`maxStack`. */
-export const MIN_LEVEL = 1
-
 /** One column of tiles; all tiles in the column share `type`. */
 export interface Cell {
   readonly x: number
@@ -36,7 +33,7 @@ function levelReason(level: number): InvalidReason | null {
   if (level === -Infinity) return 'minStack'
   if (!Number.isInteger(level)) return 'minStack'
   if (level > CONFIG.world.maxStack) return 'maxStack'
-  if (level < MIN_LEVEL) return 'minStack'
+  if (level < CONFIG.world.minStack) return 'minStack'
   return null
 }
 
@@ -101,11 +98,11 @@ export function paint(cells: CellMap, x: number, z: number, type: TileType): Cel
 
   if (!isBuildable(x, z, cells)) return { ok: false, reason: 'outsideBuildableZone' }
 
-  return setCell(cells, { x, z, type, level: MIN_LEVEL })
+  return setCell(cells, { x, z, type, level: CONFIG.world.minStack })
 }
 
 /**
- * Dig-up tool (§5.3). Removes one level, deleting the cell at `MIN_LEVEL`.
+ * Dig-up tool (§5.3). Removes one level, deleting the cell at `minStack`.
  * An empty cell is left unchanged.
  */
 export function digUp(cells: CellMap, x: number, z: number): CellResult {
@@ -116,7 +113,7 @@ export function digUp(cells: CellMap, x: number, z: number): CellResult {
   if (!cell) return { ok: true, cells }
 
   const next = new Map(cells)
-  if (cell.level > MIN_LEVEL) {
+  if (cell.level > CONFIG.world.minStack) {
     next.set(cellKey, { ...cell, level: cell.level - 1 })
   } else {
     next.delete(cellKey)
@@ -147,5 +144,5 @@ export function getLevelRange(
     itemDefinition(catalog, item.id)
     return null
   }
-  return { min: MIN_LEVEL, max: CONFIG.world.maxStack }
+  return { min: CONFIG.world.minStack, max: CONFIG.world.maxStack }
 }
