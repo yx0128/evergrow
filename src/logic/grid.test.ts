@@ -123,6 +123,9 @@ describe('bounds', () => {
 })
 
 describe('isBuildable', () => {
+  const origin = 20
+  const ring = CONFIG.world.buildableRing
+
   it('allows every cell in the start zone', () => {
     const empty: GridCells = new Map()
     for (const [x, z] of [
@@ -141,35 +144,32 @@ describe('isBuildable', () => {
     expect(isBuildable(0, -HALF_START - 1, empty)).toBe(false)
   })
 
-  it('is true 6 cells away from an existing tile and false 7 cells away', () => {
-    const cells = tile(20, 20)
-    for (const [x, z] of [
-      [26, 20],
-      [14, 20],
-      [20, 26],
-      [20, 14],
-      [26, 26],
-      [14, 14],
-    ]) {
-      expect(isBuildable(x, z, cells)).toBe(true)
+  it('is true within the buildable ring of an existing tile and false beyond it', () => {
+    const cells = tile(origin, origin)
+    for (const dx of [-ring, 0, ring]) {
+      for (const dz of [-ring, 0, ring]) {
+        expect(isBuildable(origin + dx, origin + dz, cells)).toBe(true)
+      }
     }
-    expect(isBuildable(27, 20, cells)).toBe(false)
-    expect(isBuildable(20, 13, cells)).toBe(false)
-    expect(isBuildable(27, 27, cells)).toBe(false)
+    for (const offset of [-ring - 1, ring + 1]) {
+      expect(isBuildable(origin + offset, origin, cells)).toBe(false)
+      expect(isBuildable(origin, origin + offset, cells)).toBe(false)
+      expect(isBuildable(origin + offset, origin + offset, cells)).toBe(false)
+    }
   })
 
   it('water tiles extend the buildable ring', () => {
-    expect(isBuildable(26, 20, typedTile(20, 20, 'water'))).toBe(true)
+    expect(isBuildable(origin + ring, origin, typedTile(origin, origin, 'water'))).toBe(true)
   })
 
   it('every tile type extends the buildable ring', () => {
     for (const type of ['grass', 'land', 'water'] as const) {
-      expect(isBuildable(26, 20, typedTile(20, 20, type))).toBe(true)
+      expect(isBuildable(origin + ring, origin, typedTile(origin, origin, type))).toBe(true)
     }
   })
 
   it('rejects cells outside the world cap even when within the ring', () => {
-    const edge = tile(HALF_WORLD - 3, 0)
+    const edge = tile(HALF_WORLD - ring, 0)
     expect(isBuildable(HALF_WORLD, 0, edge)).toBe(false)
     expect(isBuildable(HALF_WORLD - 1, 0, edge)).toBe(true)
     expect(isBuildable(HALF_WORLD, 0, new Map())).toBe(false)

@@ -34,14 +34,14 @@ body {
   inset: 0;
   display: grid;
   place-items: center;
-  padding: 2rem;
+  padding: var(--fallback-padding);
   text-align: center;
 }
 
 .app-fallback-inner {
   display: grid;
-  gap: 0.5rem;
-  max-width: 32rem;
+  gap: var(--fallback-gap);
+  max-width: var(--fallback-max-width);
 }
 
 .app-fallback p {
@@ -49,6 +49,6 @@ body {
 }
 
 .app-fallback-title {
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: var(--fallback-title-size);
+  font-weight: var(--fallback-title-weight);
 }

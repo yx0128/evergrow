@@ -76,10 +76,9 @@ describe('no water or neighbour rules (D014)', () => {
 
   it('paint places water in the ring outside the start zone', () => {
     const cells = mapWith(cell(HALF_START - 1, 0, 'grass'))
+    const x = HALF_START - 1 + CONFIG.world.buildableRing
 
-    expect(getCell(expectOk(paint(cells, HALF_START + 3, 0, 'water')), HALF_START + 3, 0)?.type).toBe(
-      'water',
-    )
+    expect(getCell(expectOk(paint(cells, x, 0, 'water')), x, 0)?.type).toBe('water')
   })
 
   it('digUp lowers water one level at a time', () => {

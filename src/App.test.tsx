@@ -23,6 +23,26 @@ const rgb = (hex: string): string => {
   return `rgb(${r}, ${g}, ${b})`
 }
 
+const fallbackValues: Record<string, string> = {
+  '--fallback-padding': `${CONFIG.ui.fallback.paddingRem}rem`,
+  '--fallback-gap': `${CONFIG.ui.fallback.gapRem}rem`,
+  '--fallback-max-width': `${CONFIG.ui.fallback.maxWidthRem}rem`,
+  '--fallback-title-size': `${CONFIG.ui.fallback.titleSizeRem}rem`,
+  '--fallback-title-weight': String(CONFIG.ui.fallback.titleWeight),
+}
+
+const stylesheets = import.meta.glob('/src/index.css', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>
+
+const stylesheet = stylesheets['/src/index.css'] ?? ''
+
+const stylesheetReferences = [
+  ...new Set([...stylesheet.matchAll(/var\(([^)]*)\)/g)].map((match) => match[1].trim())),
+].sort()
+
 afterEach(() => {
   canvasState.shouldThrow = false
   canvasState.children = null
@@ -48,5 +68,19 @@ describe('App', () => {
     expect(screen.getByRole('alert').textContent).toContain(
       CONFIG.strings.webglUnavailable.title,
     )
+  })
+
+  it('sets the fallback layout variables from config', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    canvasState.shouldThrow = true
+    render(<App />)
+    const fallback = screen.getByRole('alert')
+    expect(fallback.className).toBe('app-fallback')
+
+    for (const [name, value] of Object.entries(fallbackValues)) {
+      expect(fallback.style.getPropertyValue(name)).toBe(value)
+    }
+
+    expect(stylesheetReferences).toEqual(Object.keys(fallbackValues).sort())
   })
 })

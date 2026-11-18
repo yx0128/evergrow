@@ -45,6 +45,7 @@ export default defineConfig(({ command, isPreview }) => ({
     (command === 'build' || isPreview ? `/${repoName}/` : '/'),
   plugins: [react(), htmlConfig, faviconPlugin],
   test: {
+    css: { include: [/index\.css/] },
     coverage: {
       provider: 'v8',
       include: ['src/**/*.{ts,tsx}'],

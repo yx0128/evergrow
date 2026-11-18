@@ -1,14 +1,25 @@
 import { Canvas } from '@react-three/fiber'
+import type { CSSProperties } from 'react'
 import { CONFIG } from './config/evergrow.config'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 
 const background = CONFIG.palette.background.day
+const fallback = CONFIG.ui.fallback
 
 const unavailable = (
   <div
     className="app-fallback"
     role="alert"
-    style={{ backgroundColor: CONFIG.palette.ui.surface }}
+    style={{
+      backgroundColor: CONFIG.palette.ui.surface,
+      ...({
+        '--fallback-padding': `${fallback.paddingRem}rem`,
+        '--fallback-gap': `${fallback.gapRem}rem`,
+        '--fallback-max-width': `${fallback.maxWidthRem}rem`,
+        '--fallback-title-size': `${fallback.titleSizeRem}rem`,
+        '--fallback-title-weight': fallback.titleWeight,
+      } as CSSProperties),
+    }}
   >
     <div className="app-fallback-inner">
       <p className="app-fallback-title" style={{ color: CONFIG.palette.ui.text }}>

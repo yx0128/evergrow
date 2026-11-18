@@ -211,7 +211,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 261 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
+npm test         # 262 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -1017,3 +1017,89 @@ Verification:
 - `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
   warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
+
+### 2026-11-19 — fix: move fallback layout values into config
+
+Done:
+
+- Added a readonly `ui.fallback` group to `UiConfig`/`CONFIG` with padding, gap,
+  max width, title size and title weight.
+- `App.tsx` sets the `--fallback-*` custom properties on `.app-fallback` from that
+  group and keeps the surface background.
+- `src/index.css` reads those variables for padding, gap, max-width, title font-size
+  and font-weight, with no inline fallbacks.
+- Derived the grid ring coordinates from `(20, 20)` and
+  `CONFIG.world.buildableRing`, derived the neighbour paint coordinate from
+  `HALF_START - 1 + buildableRing`, and dropped the duplicated storage-key literal.
+- Added an `src/App.test.tsx` test that checks every fallback variable against
+  `CONFIG.ui.fallback` and that every `var(--fallback-*)` in `src/index.css` is set
+  on the fallback element.
+
+Why: a config audit found the WebGL fallback layout hard-coded in CSS while the rest
+of the UI is config-driven; a misspelled CSS variable would fail silently.
+
+Verification:
+
+- `npm test` 262/262, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+- With `CONFIG.world.buildableRing` temporarily set to 5, the grid and
+  cellsNeighbours tests passed; restored.
+- A temporarily misspelled `var(--fallback-gap)` made the new App test fail;
+  restored.
+- `git diff main -- src/index.css` contains only the five value replacements; the
+  computed values stay 2rem, 0.5rem, 32rem, 1.5rem and 600.
+
+### 2026-11-19 — fix: tighten fallback and buildable ring tests
+
+Done:
+
+- Removed the Node type reference and file read from `src/App.test.tsx`; the
+  stylesheet now loads through `import.meta.glob` with `?raw`.
+- The CSS guard now captures every `var(...)` body, trimmed, and asserts the sorted
+  unique list exactly equals the sorted `fallbackValues` keys. This catches misspelled
+  prefixes, restored literals and inline fallbacks.
+- The in-range ring test uses nested `dx`/`dz` loops over `[-ring, 0, ring]`, and the
+  world-cap test derives its edge tile from `HALF_WORLD - ring`.
+
+Why: the review found the Node reference, a prefix-filtered CSS guard, lost north,
+south and west ring coverage and one remaining ring-dependent literal.
+
+Verification:
+
+- `npm test` 262/262, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+- Each temporary mutation failed as required: `--fallback-gapp`, `--fallbck-gap`,
+  `gap: 0.5rem`, `var(--fallback-gap, 9rem)`, the renamed `App.tsx` property, and both
+  `isBuildable` guards.
+- With `buildableRing` set to 1, 5, 8 and 14, the only failure was
+  `evergrow config has the brief-fixed world bounds`.
+- A temporary `src/__probe.ts` with `process.env.X` reported TS2591; the probe was
+  deleted and `git grep -nE 'reference types="node"|node:fs' -- src` returns nothing.
+- `git diff 30ebd6d --stat` lists only the four allowed files.
+
+### 2026-11-19 — fix: load fallback stylesheet through Vitest
+
+Done:
+
+- Added `test.css.include: [/index\.css/]` to `vite.config.ts`, so Vitest processes
+  `src/index.css` and `import.meta.glob` with `?raw` returns its real contents.
+- Removed the test-only `readFileSync('fs')` fallback and the `@ts-expect-error`
+  comment from `src/App.test.tsx`; the exact-match CSS guard is unchanged.
+
+Why: `test.css.include` is needed because Vitest otherwise replaces CSS modules with
+an empty string, even for `?raw`, and the previous fallback read the file through Node.
+
+Verification:
+
+- `npm test` 262/262, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+- Removing the `css.include` line and each of the App CSS mutations made
+  `src/App.test.tsx` fail as required.
+- `git grep -nE "from '(node:)?fs'|readFileSync|reference types=\"node\"" -- src`
+  returns nothing; `@ts-expect-error` remains only in
+  `src/config/evergrow.config.test.ts`.
+- A temporary `src/__probe.ts` with `process.env.X` reported only TS2591.
+- `git diff f2800c7 --stat` lists only the four allowed files.

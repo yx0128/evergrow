@@ -98,6 +98,13 @@ export interface UiConfig {
   readonly toastMs: number
   readonly autosaveDebounceMs: number
   readonly storagePrefix: string
+  readonly fallback: {
+    readonly paddingRem: number
+    readonly gapRem: number
+    readonly maxWidthRem: number
+    readonly titleSizeRem: number
+    readonly titleWeight: number
+  }
 }
 
 export interface StarterConfig {
@@ -292,6 +299,13 @@ export const CONFIG: EvergrowConfig = {
     toastMs: 3000,
     autosaveDebounceMs: 500,
     storagePrefix: 'evergrow:',
+    fallback: {
+      paddingRem: 2,
+      gapRem: 0.5,
+      maxWidthRem: 32,
+      titleSizeRem: 1.5,
+      titleWeight: 600,
+    },
   },
 
   starter: {
