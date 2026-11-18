@@ -15,7 +15,7 @@ import {
   type CellResult,
 } from './cells'
 import { getFootprintCells } from './footprint'
-import { isInWorld, key } from './grid'
+import { isBuildable, isInWorld, key } from './grid'
 import {
   buildOccupancy,
   itemAt,
@@ -90,20 +90,7 @@ export interface BatchSkip {
   readonly reason: InvalidReason
 }
 
-export type BatchResult =
-  | {
-      readonly ok: true
-      readonly state: WorldState
-      readonly history: History
-      readonly skipped: readonly BatchSkip[]
-    }
-  | {
-      readonly ok: false
-      readonly reason: InvalidReason
-      readonly state: WorldState
-      readonly history: History
-      readonly skipped: readonly BatchSkip[]
-    }
+export type BatchResult = OperationResult & { readonly skipped: readonly BatchSkip[] }
 
 export type OperationResult =
   | { readonly ok: true; readonly state: WorldState; readonly history: History }
@@ -157,23 +144,38 @@ function negate(deltas: readonly InventoryDelta[]): InventoryDelta[] {
   return deltas.map(({ id, delta }) => ({ id, delta: -delta }))
 }
 
+interface WorldChanges {
+  readonly cells?: CellMap
+  readonly items?: PlacedItems
+  readonly coinsDelta?: number
+  readonly inventoryDeltas?: readonly InventoryDelta[]
+}
+
 function withWorld(
   state: WorldState,
-  changes: {
-    readonly cells?: CellMap
-    readonly items?: PlacedItems
-    readonly coinsDelta?: number
-    readonly inventoryDeltas?: readonly InventoryDelta[]
-  },
+  changes: WorldChanges,
   catalog: ReadonlyMap<string, ItemDef>,
 ): WorldState {
   const items = changes.items ?? state.items
   return {
     cells: changes.cells ?? state.cells,
     items,
-    occupancy: buildOccupancy(items, catalog),
+    occupancy: items === state.items ? state.occupancy : buildOccupancy(items, catalog),
     inventory: changeInventory(state.inventory, changes.inventoryDeltas ?? []),
     coins: state.coins + (changes.coinsDelta ?? 0),
+  }
+}
+
+function inverseWith(
+  state: WorldState,
+  coinsDelta: number,
+  inventoryDeltas: readonly InventoryDelta[],
+): Inverse {
+  return {
+    cells: state.cells,
+    items: state.items,
+    coinsDelta,
+    inventoryDeltas,
   }
 }
 
@@ -182,12 +184,15 @@ function inverseOf(
   coinsDelta: number,
   inventoryDeltas: readonly InventoryDelta[],
 ): Inverse {
-  return {
-    cells: state.cells,
-    items: state.items,
-    coinsDelta: -coinsDelta,
-    inventoryDeltas: negate(inventoryDeltas),
-  }
+  return inverseWith(state, -coinsDelta, negate(inventoryDeltas))
+}
+
+function simpleApply(
+  state: WorldState,
+  changes: WorldChanges,
+  catalog: ReadonlyMap<string, ItemDef>,
+): ApplyResult {
+  return { state: withWorld(state, changes, catalog), inverse: inverseOf(state, 0, []) }
 }
 
 function unwrapCells(result: CellResult): CellMap {
@@ -195,18 +200,52 @@ function unwrapCells(result: CellResult): CellMap {
   return result.cells
 }
 
-function placementAutoTiles(
+function checkPlacement(
+  command: Extract<Command, { kind: 'place' | 'move' }>,
   def: ItemDef,
-  x: number,
-  z: number,
-  rot: Rotation,
-  autoTile: TileType,
   state: PlacementState,
   ignoreUid?: string,
 ) {
-  const result = validatePlacement(def, x, z, rot, autoTile, state, ignoreUid)
+  return validatePlacement(
+    def,
+    command.x,
+    command.z,
+    command.rot,
+    command.autoTile,
+    state,
+    ignoreUid,
+  )
+}
+
+function placementAutoTiles(
+  command: Extract<Command, { kind: 'place' | 'move' }>,
+  def: ItemDef,
+  state: PlacementState,
+  ignoreUid?: string,
+) {
+  const result = checkPlacement(command, def, state, ignoreUid)
   if (!result.ok) throw new Error(`Invalid placement: ${result.reason}`)
   return result.autoTiles
+}
+
+function editFootprint(
+  state: WorldState,
+  item: PlacedItem,
+  catalog: ReadonlyMap<string, ItemDef>,
+  edit: (cells: CellMap, x: number, z: number) => CellResult,
+): CellResult {
+  const def = itemDefinition(catalog, item.id)
+  let cells = state.cells
+  for (const point of getFootprintCells(def, item.x, item.z, item.rot)) {
+    const result = edit(cells, point.x, point.z)
+    if (!result.ok) return result
+    cells = result.cells
+  }
+  return { ok: true, cells }
+}
+
+function allowedTile(def: ItemDef, type: TileType): ValidateResult {
+  return def.allowedTiles.includes(type) ? valid() : invalid('wrongTile')
 }
 
 function placeAutoTiles(
@@ -230,14 +269,10 @@ export function validate(
       if (state.items.has(command.uid)) {
         throw new Error(`Item uid already exists: ${command.uid}`)
       }
-      const placement = validatePlacement(
-        def,
-        command.x,
-        command.z,
-        command.rot,
-        command.autoTile,
-        { cells: state.cells, occupancy: state.occupancy },
-      )
+      const placement = checkPlacement(command, def, {
+        cells: state.cells,
+        occupancy: state.occupancy,
+      })
       if (!placement.ok) return invalid(placement.reason)
       if (command.source === 'inventory') {
         const count = state.inventory.get(command.id) ?? 0
@@ -250,21 +285,15 @@ export function validate(
     case 'move': {
       const item = requireItem(state, command.uid)
       const def = itemDefinition(catalog, item.id)
-      const placement = validatePlacement(
+      const placement = checkPlacement(
+        command,
         def,
-        command.x,
-        command.z,
-        command.rot,
-        command.autoTile,
         { cells: state.cells, occupancy: state.occupancy },
         command.uid,
       )
       return placement.ok ? valid() : invalid(placement.reason)
     }
-    case 'rotate': {
-      requireItem(state, command.uid)
-      return valid()
-    }
+    case 'rotate':
     case 'store':
     case 'sell':
       requireItem(state, command.uid)
@@ -274,15 +303,17 @@ export function validate(
       const item = itemAt(command.x, command.z, state.occupancy, state.items)
       if (item) {
         const def = itemDefinition(catalog, item.id)
-        return def.allowedTiles.includes(command.type) ? valid() : invalid('wrongTile')
+        return allowedTile(def, command.type)
       }
-      const result = paint(state.cells, command.x, command.z, command.type)
-      return result.ok ? valid() : invalid(result.reason)
+      if (state.cells.has(key(command.x, command.z))) return valid()
+      return isBuildable(command.x, command.z, state.cells)
+        ? valid()
+        : invalid('outsideBuildableZone')
     }
     case 'changeItemTile': {
       const item = requireItem(state, command.uid)
       const def = itemDefinition(catalog, item.id)
-      return def.allowedTiles.includes(command.type) ? valid() : invalid('wrongTile')
+      return allowedTile(def, command.type)
     }
     case 'setLevel': {
       const uid = state.occupancy.get(key(command.x, command.z))
@@ -296,14 +327,10 @@ export function validate(
     }
     case 'setLevelItem': {
       const item = requireItem(state, command.uid)
-      const def = itemDefinition(catalog, item.id)
-      let cells = state.cells
-      for (const point of getFootprintCells(def, item.x, item.z, item.rot)) {
-        const result = setLevel(cells, point.x, point.z, command.level)
-        if (!result.ok) return invalid(result.reason)
-        cells = result.cells
-      }
-      return valid()
+      const result = editFootprint(state, item, catalog, (cells, x, z) =>
+        setLevel(cells, x, z, command.level),
+      )
+      return result.ok ? valid() : invalid(result.reason)
     }
     case 'digUp': {
       if (!isInWorld(command.x, command.z)) return invalid('outsideWorld')
@@ -325,14 +352,10 @@ export function apply(
   switch (command.kind) {
     case 'place': {
       const def = itemDefinition(catalog, command.id)
-      const autoTiles = placementAutoTiles(
-        def,
-        command.x,
-        command.z,
-        command.rot,
-        command.autoTile,
-        { cells: state.cells, occupancy: state.occupancy },
-      )
+      const autoTiles = placementAutoTiles(command, def, {
+        cells: state.cells,
+        occupancy: state.occupancy,
+      })
       const cells = placeAutoTiles(state.cells, autoTiles)
       const items = new Map(state.items)
       items.set(command.uid, {
@@ -354,31 +377,22 @@ export function apply(
       const item = requireItem(state, command.uid)
       const def = itemDefinition(catalog, item.id)
       const autoTiles = placementAutoTiles(
+        command,
         def,
-        command.x,
-        command.z,
-        command.rot,
-        command.autoTile,
         { cells: state.cells, occupancy: state.occupancy },
         command.uid,
       )
       const cells = placeAutoTiles(state.cells, autoTiles)
       const items = new Map(state.items)
       items.set(command.uid, { ...item, x: command.x, z: command.z, rot: command.rot })
-      return {
-        state: withWorld(state, { cells, items }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      return simpleApply(state, { cells, items }, catalog)
     }
     case 'rotate': {
       const item = requireItem(state, command.uid)
       const rot = ((item.rot + 1) % 4) as Rotation
       const items = new Map(state.items)
       items.set(command.uid, { ...item, rot })
-      return {
-        state: withWorld(state, { items }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      return simpleApply(state, { items }, catalog)
     }
     case 'store': {
       const item = requireItem(state, command.uid)
@@ -403,48 +417,33 @@ export function apply(
     }
     case 'paint': {
       const cells = unwrapCells(paint(state.cells, command.x, command.z, command.type))
-      return {
-        state: withWorld(state, { cells }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      return simpleApply(state, { cells }, catalog)
     }
     case 'changeItemTile': {
       const item = requireItem(state, command.uid)
-      const def = itemDefinition(catalog, item.id)
-      let cells = state.cells
-      for (const point of getFootprintCells(def, item.x, item.z, item.rot)) {
-        cells = unwrapCells(setType(cells, point.x, point.z, command.type))
-      }
-      return {
-        state: withWorld(state, { cells }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      const cells = unwrapCells(
+        editFootprint(state, item, catalog, (cells, x, z) =>
+          setType(cells, x, z, command.type),
+        ),
+      )
+      return simpleApply(state, { cells }, catalog)
     }
     case 'setLevel': {
       const cells = unwrapCells(setLevel(state.cells, command.x, command.z, command.level))
-      return {
-        state: withWorld(state, { cells }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      return simpleApply(state, { cells }, catalog)
     }
     case 'setLevelItem': {
       const item = requireItem(state, command.uid)
-      const def = itemDefinition(catalog, item.id)
-      let cells = state.cells
-      for (const point of getFootprintCells(def, item.x, item.z, item.rot)) {
-        cells = unwrapCells(setLevel(cells, point.x, point.z, command.level))
-      }
-      return {
-        state: withWorld(state, { cells }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      const cells = unwrapCells(
+        editFootprint(state, item, catalog, (cells, x, z) =>
+          setLevel(cells, x, z, command.level),
+        ),
+      )
+      return simpleApply(state, { cells }, catalog)
     }
     case 'digUp': {
       const cells = unwrapCells(digUp(state.cells, command.x, command.z))
-      return {
-        state: withWorld(state, { cells }, catalog),
-        inverse: inverseOf(state, 0, []),
-      }
+      return simpleApply(state, { cells }, catalog)
     }
     case 'batch':
       throw new Error('Batch commands must be executed with executeBatch')
@@ -457,20 +456,6 @@ function validateInverse(inverse: Inverse, state: WorldState): ValidateResult {
     if ((state.inventory.get(id) ?? 0) + delta < 0) return invalid('notInInventory')
   }
   return valid()
-}
-
-function applyInverse(
-  inverse: Inverse,
-  state: WorldState,
-  catalog: ReadonlyMap<string, ItemDef>,
-): WorldState {
-  return {
-    cells: inverse.cells,
-    items: inverse.items,
-    occupancy: buildOccupancy(inverse.items, catalog),
-    inventory: changeInventory(state.inventory, inverse.inventoryDeltas),
-    coins: state.coins + inverse.coinsDelta,
-  }
 }
 
 function appendPast(
@@ -499,11 +484,35 @@ function addInverseDeltas(sum: DeltaSum, inverse: Inverse): void {
 }
 
 function inverseWithDeltas(state: WorldState, sum: DeltaSum): Inverse {
+  return inverseWith(
+    state,
+    sum.coinsDelta,
+    [...sum.inventoryDeltas].map(([id, delta]) => ({ id, delta })),
+  )
+}
+
+function validateAndApply(
+  command: Command,
+  state: WorldState,
+  catalog: ReadonlyMap<string, ItemDef>,
+):
+  | { readonly ok: true; readonly applied: ApplyResult }
+  | { readonly ok: false; readonly reason: InvalidReason } {
+  const result = validate(command, state, catalog)
+  if (!result.ok) return { ok: false, reason: result.reason }
+  return { ok: true, applied: apply(command, state, catalog) }
+}
+
+function appliedResult(
+  state: WorldState,
+  history: History,
+  entry: HistoryEntry,
+  future: readonly HistoryEntry[],
+): OperationResult {
   return {
-    cells: state.cells,
-    items: state.items,
-    coinsDelta: sum.coinsDelta,
-    inventoryDeltas: [...sum.inventoryDeltas].map(([id, delta]) => ({ id, delta })),
+    ok: true,
+    state,
+    history: { past: appendPast(history, entry), future },
   }
 }
 
@@ -514,18 +523,15 @@ export function execute(
   command: Command,
   catalog: ReadonlyMap<string, ItemDef>,
 ): OperationResult {
-  const result = validate(command, state, catalog)
-  if (!result.ok) return { ok: false, reason: result.reason, state, history }
+  const outcome = validateAndApply(command, state, catalog)
+  if (!outcome.ok) return { ok: false, reason: outcome.reason, state, history }
 
-  const applied = apply(command, state, catalog)
-  return {
-    ok: true,
-    state: applied.state,
-    history: {
-      past: appendPast(history, { command, inverse: applied.inverse }),
-      future: [],
-    },
-  }
+  return appliedResult(
+    outcome.applied.state,
+    history,
+    { command, inverse: outcome.applied.inverse },
+    [],
+  )
 }
 
 /**
@@ -549,15 +555,14 @@ export function executeBatch(
   let working = state
   for (let index = 0; index < commands.length; index += 1) {
     const command = commands[index]
-    const result = validate(command, working, catalog)
-    if (!result.ok) {
-      skipped.push({ index, reason: result.reason })
+    const outcome = validateAndApply(command, working, catalog)
+    if (!outcome.ok) {
+      skipped.push({ index, reason: outcome.reason })
       continue
     }
-    const single = apply(command, working, catalog)
-    working = single.state
+    working = outcome.applied.state
     applied.push(command)
-    addInverseDeltas(sum, single.inverse)
+    addInverseDeltas(sum, outcome.applied.inverse)
   }
 
   if (applied.length === 0) {
@@ -572,12 +577,12 @@ export function executeBatch(
 
   const batch: Command = { kind: 'batch', commands: applied }
   return {
-    ok: true,
-    state: working,
-    history: {
-      past: appendPast(history, { command: batch, inverse: inverseWithDeltas(state, sum) }),
-      future: [],
-    },
+    ...appliedResult(
+      working,
+      history,
+      { command: batch, inverse: inverseWithDeltas(state, sum) },
+      [],
+    ),
     skipped,
   }
 }
@@ -596,7 +601,7 @@ export function undo(
 
   return {
     ok: true,
-    state: applyInverse(entry.inverse, state, catalog),
+    state: withWorld(state, entry.inverse, catalog),
     history: {
       past: history.past.slice(0, -1),
       future: [...history.future, entry],
@@ -617,40 +622,28 @@ export function redo(
     let working = state
     const sum = emptyDeltaSum()
     for (const command of entry.command.commands) {
-      const result = validate(command, working, catalog)
-      if (!result.ok) return { ok: false, reason: result.reason, state, history }
-      const single = apply(command, working, catalog)
-      working = single.state
-      addInverseDeltas(sum, single.inverse)
+      const outcome = validateAndApply(command, working, catalog)
+      if (!outcome.ok) return { ok: false, reason: outcome.reason, state, history }
+      working = outcome.applied.state
+      addInverseDeltas(sum, outcome.applied.inverse)
     }
-    return {
-      ok: true,
-      state: working,
-      history: {
-        past: appendPast(history, {
-          command: entry.command,
-          inverse: inverseWithDeltas(state, sum),
-        }),
-        future: history.future.slice(0, -1),
-      },
-    }
+    return appliedResult(
+      working,
+      history,
+      { command: entry.command, inverse: inverseWithDeltas(state, sum) },
+      history.future.slice(0, -1),
+    )
   }
 
-  const result = validate(entry.command, state, catalog)
-  if (!result.ok) return { ok: false, reason: result.reason, state, history }
+  const outcome = validateAndApply(entry.command, state, catalog)
+  if (!outcome.ok) return { ok: false, reason: outcome.reason, state, history }
 
-  const applied = apply(entry.command, state, catalog)
-  return {
-    ok: true,
-    state: applied.state,
-    history: {
-      past: appendPast(history, {
-        command: entry.command,
-        inverse: applied.inverse,
-      }),
-      future: history.future.slice(0, -1),
-    },
-  }
+  return appliedResult(
+    outcome.applied.state,
+    history,
+    { command: entry.command, inverse: outcome.applied.inverse },
+    history.future.slice(0, -1),
+  )
 }
 
 export function canUndo(history: History): boolean {

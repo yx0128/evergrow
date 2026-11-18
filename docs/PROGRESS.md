@@ -904,3 +904,31 @@ Verification:
   404 sync check against `redirectTarget` (1). `npm run build` and `npm run lint` pass
   (existing chunk-size warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
+
+### 2026-11-18 — fix: remove duplication from world commands
+
+Done:
+
+- Merged `BatchResult` into `OperationResult & { skipped }` and shared
+  `validateAndApply` plus a success-result builder across `execute`, `executeBatch`
+  and both `redo` paths.
+- Added helpers for the common `apply` inverse, footprint edits, placement checks and
+  `allowedTiles` checks; merged the `rotate`, `store` and `sell` validation cases.
+- `withWorld` now reuses `state.occupancy` when items do not change, and `paint`
+  validation no longer runs the paint operation for an uncovered cell.
+- Replaced `applyInverse` with `withWorld` in `undo` and shared the inverse snapshot
+  helper between `inverseOf` and `inverseWithDeltas`.
+
+Why: a review found repeated result, placement, inverse and apply logic in
+`commands.ts`. Exported names, signatures and behaviour are unchanged.
+
+Verification:
+
+- `git diff --stat main -- src` shows only `src/logic/commands.ts`; no test files
+  were edited.
+- Each of `inverse: inverseOf(state, 0, [])`, `of getFootprintCells(`,
+  `validatePlacement(` and `buildOccupancy(` appears exactly once; `applyInverse` is
+  gone.
+- `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
