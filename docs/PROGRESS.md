@@ -199,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 210 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
+npm test         # 245 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -706,3 +706,33 @@ Verification:
   chunk-size warning only).
 - `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
   lines; no coverage exclusions.
+
+### 2026-11-18 — fix: mutation-review test gaps for grid, cells and water rules
+
+Done:
+
+- Added nine `grid.test.ts` tests for odd-size bounds, explicit `worldBounds` and
+  `startZoneBounds` sizes, custom world/start-zone checks, the `z` upper bound, and
+  `landBounds` insertion order and water cells. Also covered water tiles extending
+  the buildable ring.
+- Added 26 `cells.test.ts` tests: coordinate throwing in `getCell`, `setCell`,
+  `removeCell`, `setLevel` and `setType`; `x,z` key order and empty-cell behaviour;
+  dig-up edge cases; level-range lookup, empty-string uids, neighbour heights and
+  every tile type. Added a `no water or neighbour rules (D014)` describe covering
+  water at any height and beside any neighbour, paint in the ring, and water dig-up.
+- Production code is unchanged. `src/logic/cells.ts:36` (`-Infinity`) is redundant
+  because `Number.isInteger(-Infinity)` is already false, so no test can distinguish
+  it.
+
+Why: a mutation review found rules that could break without any test failing.
+
+Verification:
+
+- `npm test` 210 → 245 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines. Overall branches are 99.59%; only `src/assets/redirect.ts` line 3 is
+  uncovered.
+- Each of the 35 new tests was checked against its named temporary bug (37 bug runs
+  including two each for tests 7 and 23); every targeted test failed as expected, and
+  `git diff` for `src/logic/grid.ts` and `src/logic/cells.ts` is empty afterwards.

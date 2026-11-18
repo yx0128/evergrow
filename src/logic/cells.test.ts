@@ -38,6 +38,12 @@ function expectFail(result: CellResult, reason: InvalidReason): void {
   expect(result).toEqual({ ok: false, reason })
 }
 
+describe('getCell', () => {
+  it('throws on non-integer coordinates', () => {
+    expect(() => getCell(mapWith(), 1.5, 0)).toThrow('Invalid cell coordinates: 1.5,0')
+  })
+})
+
 describe('setCell', () => {
   it('adds a level-1 cell without mutating the input map', () => {
     const cells = mapWith()
@@ -58,6 +64,12 @@ describe('setCell', () => {
 
     expect(getCell(cells, 1, 1)).toEqual(cell(1, 1, 'grass', 3))
     expect(getCell(next, 1, 1)).toEqual(cell(1, 1, 'water', 4))
+  })
+
+  it('throws on non-integer coordinates', () => {
+    expect(() => setCell(mapWith(), cell(1.5, 0))).toThrow(
+      'Invalid cell coordinates: 1.5,0',
+    )
   })
 
   it('rejects invalid levels and stores nothing', () => {
@@ -90,6 +102,20 @@ describe('removeCell', () => {
     expect(next.size).toBe(1)
     expect(next.has(key(0, 0))).toBe(false)
     expect(next.has(key(1, 0))).toBe(true)
+  })
+
+  it('throws on non-integer coordinates', () => {
+    expect(() => removeCell(mapWith(), 1.5, 0)).toThrow(
+      'Invalid cell coordinates: 1.5,0',
+    )
+  })
+
+  it('removes x,z and not z,x', () => {
+    const cells = mapWith(cell(1, 2), cell(2, 1))
+    const next = removeCell(cells, 1, 2)
+
+    expect(next.has(key(1, 2))).toBe(false)
+    expect(next.has(key(2, 1))).toBe(true)
   })
 
   it('returns a new map when the cell does not exist', () => {
@@ -144,6 +170,20 @@ describe('setLevel', () => {
     expect(result.ok).toBe(true)
     expect(expectOk(result)).toBe(cells)
   })
+
+  it('throws on non-integer coordinates', () => {
+    expect(() => setLevel(mapWith(), 1.5, 0, 2)).toThrow(
+      'Invalid cell coordinates: 1.5,0',
+    )
+  })
+
+  it('on an empty cell ignores an invalid level', () => {
+    const cells = mapWith()
+    const result = setLevel(cells, 9, 9, MAX + 1)
+
+    expect(result.ok).toBe(true)
+    expect(expectOk(result)).toBe(cells)
+  })
 })
 
 describe('setType', () => {
@@ -161,6 +201,12 @@ describe('setType', () => {
 
     expect(result.ok).toBe(true)
     expect(expectOk(result)).toBe(cells)
+  })
+
+  it('throws on non-integer coordinates', () => {
+    expect(() => setType(mapWith(), 1.5, 0, 'land')).toThrow(
+      'Invalid cell coordinates: 1.5,0',
+    )
   })
 })
 
@@ -199,6 +245,24 @@ describe('paint', () => {
 })
 
 describe('digUp', () => {
+  it('returns outsideWorld for an integer outside the world', () => {
+    expectFail(digUp(mapWith(), HALF_WORLD, 0), 'outsideWorld')
+  })
+
+  it('lowers x,z and not z,x', () => {
+    const cells = mapWith(cell(1, 2, 'land', 3), cell(2, 1, 'grass', 5))
+    const next = expectOk(digUp(cells, 1, 2))
+
+    expect(getCell(next, 1, 2)?.level).toBe(2)
+    expect(getCell(next, 2, 1)?.level).toBe(5)
+  })
+
+  it('takes level 2 down to level 1', () => {
+    const cells = mapWith(cell(1, 1, 'land', 2))
+
+    expect(getCell(expectOk(digUp(cells, 1, 1)), 1, 1)).toEqual(cell(1, 1, 'land', 1))
+  })
+
   it('removes one level', () => {
     const cells = mapWith(cell(1, 1, 'land', 3))
     const next = expectOk(digUp(cells, 1, 1))
@@ -306,5 +370,130 @@ describe('getLevelRange', () => {
     expect(() =>
       getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, new Map()),
     ).toThrow('Unknown item id: cottage')
+  })
+
+  it('looks up x,z and not z,x', () => {
+    const items = itemsOf(placed('a', lamp, 1, 2))
+    const occupancy = buildOccupancy(items, catalog)
+
+    expect(getLevelRange(1, 2, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
+    expect(getLevelRange(2, 1, { cells: mapWith(), occupancy, items }, catalog)).toEqual(
+      range,
+    )
+  })
+
+  it('treats an empty-string uid as an item', () => {
+    const items = itemsOf(placed('', lamp, 0, 0))
+    const occupancy = new Map([[key(0, 0), '']])
+
+    expect(getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
+  })
+
+  it('ignores neighbouring heights', () => {
+    const cells = mapWith(
+      cell(0, 0, 'grass', 1),
+      cell(0, -1, 'grass', 1),
+      cell(1, 0, 'grass', 1),
+      cell(0, 1, 'grass', 1),
+      cell(-1, 0, 'grass', 1),
+    )
+
+    expect(getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog)).toEqual(
+      range,
+    )
+  })
+
+  it('is the full range for every tile type', () => {
+    for (const type of ['grass', 'land', 'water'] as const) {
+      const cells = mapWith(cell(0, 0, type, 1))
+      expect(
+        getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog),
+      ).toEqual(range)
+    }
+  })
+})
+
+describe('no water or neighbour rules (D014)', () => {
+  it('setCell stores water at any height beside any neighbour', () => {
+    const cells = mapWith(cell(1, 0, 'land', 1))
+    const next = expectOk(setCell(cells, cell(0, 0, 'water', 5)))
+
+    expect(getCell(next, 0, 0)).toEqual(cell(0, 0, 'water', 5))
+  })
+
+  it('setLevel raises water above a lower neighbour', () => {
+    const cells = mapWith(cell(0, 0, 'water', 1), cell(1, 0, 'land', 1))
+
+    expect(getCell(expectOk(setLevel(cells, 0, 0, MAX)), 0, 0)?.level).toBe(MAX)
+  })
+
+  it('setLevel raises land beside water', () => {
+    const cells = mapWith(cell(0, 0, 'land', 1), cell(1, 0, 'water', 1))
+
+    expect(getCell(expectOk(setLevel(cells, 0, 0, MAX)), 0, 0)?.level).toBe(MAX)
+  })
+
+  it('setType makes water beside a different height', () => {
+    const cells = mapWith(cell(0, 0, 'land', 2), cell(1, 0, 'grass', 5))
+
+    expect(getCell(expectOk(setType(cells, 0, 0, 'water')), 0, 0)).toEqual(
+      cell(0, 0, 'water', 2),
+    )
+  })
+
+  it('paint turns a raised column into water', () => {
+    const cells = mapWith(cell(2, 3, 'grass', 5))
+
+    expect(getCell(expectOk(paint(cells, 2, 3, 'water')), 2, 3)).toEqual(
+      cell(2, 3, 'water', 5),
+    )
+  })
+
+  it('paint turns raised water into land', () => {
+    const cells = mapWith(cell(2, 3, 'water', 5))
+
+    expect(getCell(expectOk(paint(cells, 2, 3, 'land')), 2, 3)).toEqual(
+      cell(2, 3, 'land', 5),
+    )
+  })
+
+  it('paint places water beside land', () => {
+    const cells = mapWith(cell(0, 0, 'land'))
+
+    expect(getCell(expectOk(paint(cells, 1, 0, 'water')), 1, 0)?.type).toBe('water')
+  })
+
+  it('paint places land beside water', () => {
+    const cells = mapWith(cell(0, 0, 'water'))
+
+    expect(getCell(expectOk(paint(cells, 1, 0, 'land')), 1, 0)?.type).toBe('land')
+  })
+
+  it('paint places water beside a raised tile', () => {
+    const cells = mapWith(cell(0, 0, 'land', MAX))
+
+    expect(getCell(expectOk(paint(cells, 1, 0, 'water')), 1, 0)).toEqual(
+      cell(1, 0, 'water', MIN_LEVEL),
+    )
+  })
+
+  it('paint places water in the ring outside the start zone', () => {
+    const cells = mapWith(cell(HALF_START - 1, 0, 'grass'))
+
+    expect(getCell(expectOk(paint(cells, HALF_START + 3, 0, 'water')), HALF_START + 3, 0)?.type).toBe(
+      'water',
+    )
+  })
+
+  it('digUp lowers water one level at a time', () => {
+    const cells = mapWith(cell(1, 1, 'water', 3))
+
+    expect(getCell(expectOk(digUp(cells, 1, 1)), 1, 1)).toEqual(cell(1, 1, 'water', 2))
+  })
+
+  it('digUp removes level-1 water', () => {
+    const cells = mapWith(cell(1, 1, 'water', 1))
+
+    expect(expectOk(digUp(cells, 1, 1)).size).toBe(0)
   })
 })

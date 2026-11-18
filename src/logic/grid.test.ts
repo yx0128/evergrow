@@ -13,6 +13,8 @@ import {
   neighbour,
   neighbours,
   parseKey,
+  startZoneBounds,
+  worldBounds,
 } from './grid'
 import type { GridCells } from './grid'
 
@@ -20,6 +22,11 @@ const HALF_WORLD = CONFIG.world.maxSize / 2
 const HALF_START = CONFIG.world.startZone / 2
 
 const tile = (x: number, z: number): GridCells => new Map([[key(x, z), { x, z }]])
+const typedTile = (
+  x: number,
+  z: number,
+  type: 'grass' | 'land' | 'water',
+): GridCells => new Map([[key(x, z), { x, z, type }]])
 
 describe('key / parseKey', () => {
   it('round-trips positive, negative and zero coordinates', () => {
@@ -90,6 +97,33 @@ describe('bounds', () => {
     )
   })
 
+  it('boundsForSize floors odd sizes', () => {
+    expect(boundsForSize(5)).toEqual({ minX: -2, maxX: 2, minZ: -2, maxZ: 2 })
+  })
+
+  it('worldBounds honours an explicit size', () => {
+    expect(worldBounds(4)).toEqual({ minX: -2, maxX: 1, minZ: -2, maxZ: 1 })
+  })
+
+  it('startZoneBounds honours an explicit size', () => {
+    expect(startZoneBounds(6)).toEqual({ minX: -3, maxX: 2, minZ: -3, maxZ: 2 })
+  })
+
+  it('isInWorld honours a custom maxSize', () => {
+    expect(isInWorld(1, 0, 4)).toBe(true)
+    expect(isInWorld(2, 0, 4)).toBe(false)
+  })
+
+  it('isWithinStartZone honours a custom startZone', () => {
+    expect(isWithinStartZone(2, 0, 6)).toBe(true)
+    expect(isWithinStartZone(3, 0, 6)).toBe(false)
+  })
+
+  it('insideBounds rejects z past maxZ', () => {
+    expect(insideBounds(1, 3, { minX: 0, maxX: 2, minZ: 0, maxZ: 2 })).toBe(false)
+    expect(isInWorld(0, HALF_WORLD)).toBe(false)
+  })
+
   it('checks the world cap and start zone edges from CONFIG', () => {
     expect(isInWorld(-HALF_WORLD, HALF_WORLD - 1)).toBe(true)
     expect(isInWorld(HALF_WORLD - 1, -HALF_WORLD)).toBe(true)
@@ -151,6 +185,10 @@ describe('isBuildable', () => {
     expect(isBuildable(27, 27, cells)).toBe(false)
   })
 
+  it('water tiles extend the buildable ring', () => {
+    expect(isBuildable(26, 20, typedTile(20, 20, 'water'))).toBe(true)
+  })
+
   it('rejects cells outside the world cap even when within the ring', () => {
     const edge = tile(HALF_WORLD - 3, 0)
     expect(isBuildable(HALF_WORLD, 0, edge)).toBe(false)
@@ -180,5 +218,22 @@ describe('landBounds', () => {
       [key(-4, 5), { x: -4, z: 5 }],
     ])
     expect(landBounds(cells)).toEqual({ minX: -4, maxX: 3, minZ: -2, maxZ: 5 })
+  })
+
+  it('does not depend on insertion order', () => {
+    const cells: GridCells = new Map([
+      [key(-4, 5), { x: -4, z: 5 }],
+      [key(3, -2), { x: 3, z: -2 }],
+      [key(0, 0), { x: 0, z: 0 }],
+    ])
+    expect(landBounds(cells)).toEqual({ minX: -4, maxX: 3, minZ: -2, maxZ: 5 })
+  })
+
+  it('includes water cells', () => {
+    const cells: GridCells = new Map([
+      [key(0, 0), { x: 0, z: 0, type: 'grass' }],
+      [key(9, 9), { x: 9, z: 9, type: 'water' }],
+    ])
+    expect(landBounds(cells)).toEqual({ minX: 0, maxX: 9, minZ: 0, maxZ: 9 })
   })
 })
