@@ -16,6 +16,7 @@ export type CellResult =
   | { readonly ok: true; readonly cells: CellMap }
   | { readonly ok: false; readonly reason: InvalidReason }
 
+/** Why a level is invalid, or null if valid. Infinity is too high; other non-integers are too low (D020). */
 function levelReason(level: number): InvalidReason | null {
   if (level === Infinity) return 'maxStack'
   if (!Number.isInteger(level)) return 'minStack'

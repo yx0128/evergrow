@@ -229,6 +229,8 @@ fixtures live in `src/logic/testing/` and are excluded from coverage.
 
 ### `src/logic/catalog.ts`
 
+- `Catalog = ReadonlyMap<string, ItemDef>` is the item definition map used across
+  the logic.
 - `validateCatalog(items, starterItems)` returns human-readable errors (empty = valid).
 - `itemDefinition(catalog, id)` returns the `ItemDef` and throws
   `Unknown item id: <id>` for a missing entry. Placement, connection and level logic
@@ -240,8 +242,8 @@ fixtures live in `src/logic/testing/` and are excluded from coverage.
 - `DIRECTIONS` / `neighbour(x,z,dir)` / `neighbours(x,z)` (N, E, S, W order).
   Axes: **+X east, +Z south, north = −Z**.
 - `boundsForSize(size)` uses `min = -floor(size/2)`, so 10 → −5..4 and 256 → −128..127.
-- `worldBounds()`, `startZoneBounds()`, `insideBounds()`, `isInWorld()`,
-  `isWithinStartZone()`. The checks return false for non-integer/NaN/Infinity input.
+- `worldBounds()`, `startZoneBounds()`, `isInBounds()`, `isInWorld()`,
+  `isInStartZone()`. The checks return false for non-integer/NaN/Infinity input.
 - `chebyshevDistance(a, b)`.
 - `isBuildable(x, z, cells)`: inside the world cap **and** (inside the start zone
   **or** within `buildableRing` Chebyshev cells of any existing tile). Returns false
@@ -966,7 +968,7 @@ Verification:
   warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
 
-### 2026-11-18 — fix: share test fixtures and split large test files
+### 2026-11-19 — fix: share test fixtures and split large test files
 
 Done:
 
@@ -989,3 +991,29 @@ Verification:
   warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines;
   no `src/logic/testing/` file appears in the report.
+
+### 2026-11-19 — fix: clarify world logic names, types and comments
+
+Done:
+
+- Renamed the bounds, placement, world-change and inverse helpers to clearer names
+  (`isInBounds`, `isInStartZone`, `autoTilesFor`, `addAutoTiles`, `applyWorldChange`,
+  `snapshotInverse`, `inverseOfForwardDeltas`, `inverseFromSum`).
+- Used `def` for item definition parameters, added the `Catalog` and
+  `PlacementCommand` types, and tightened `checkPlacement`, `autoTilesFor` and
+  `addAutoTiles` types. Replaced the rotation cast with `NEXT_ROTATION`.
+- Passed `state` directly to placement checks, renamed the hidden footprint callback
+  parameter, and added one-line doc comments to the helpers and both
+  `stripComments` guards.
+
+Why: a review found abbreviated names, loose types and undocumented helpers in the
+world logic.
+
+Verification:
+
+- The renamed-symbol, `as Rotation` and `occupancy: state.occupancy` greps return
+  nothing; `ReadonlyMap<string, ItemDef>` appears only in the `Catalog` alias.
+- Before/after test names differ only by `insideBounds` → `isInBounds`.
+- `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.

@@ -39,6 +39,8 @@ export type Command =
   | { readonly kind: 'digUp'; readonly x: number; readonly z: number }
   | { readonly kind: 'batch'; readonly commands: readonly Command[] }
 
+export type PlacementCommand = Extract<Command, { readonly kind: 'place' | 'move' }>
+
 export interface InventoryDelta {
   readonly id: string
   readonly delta: number

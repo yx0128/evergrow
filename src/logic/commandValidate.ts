@@ -1,5 +1,5 @@
 import type { ItemDef, TileType } from '../config/evergrow.config'
-import { itemDefinition } from './catalog'
+import { itemDefinition, type Catalog } from './catalog'
 import { setLevel } from './cells'
 import { isBuildable, isInWorld, key } from './grid'
 import { itemAt } from './placement'
@@ -20,7 +20,7 @@ function allowedTile(def: ItemDef, type: TileType): ValidateResult {
 export function validate(
   command: Command,
   state: WorldState,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): ValidateResult {
   switch (command.kind) {
     case 'place': {
@@ -28,10 +28,7 @@ export function validate(
       if (state.items.has(command.uid)) {
         throw new Error(`Item uid already exists: ${command.uid}`)
       }
-      const placement = checkPlacement(command, def, {
-        cells: state.cells,
-        occupancy: state.occupancy,
-      })
+      const placement = checkPlacement(command, def, state)
       if (!placement.ok) return invalid(placement.reason)
       if (command.source === 'inventory') {
         const count = state.inventory.get(command.id) ?? 0
@@ -44,12 +41,7 @@ export function validate(
     case 'move': {
       const item = requireItem(state, command.uid)
       const def = itemDefinition(catalog, item.id)
-      const placement = checkPlacement(
-        command,
-        def,
-        { cells: state.cells, occupancy: state.occupancy },
-        command.uid,
-      )
+      const placement = checkPlacement(command, def, state, command.uid)
       return placement.ok ? valid() : invalid(placement.reason)
     }
     case 'rotate':

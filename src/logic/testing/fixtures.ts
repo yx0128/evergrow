@@ -1,4 +1,5 @@
 import type { ItemDef } from '../../config/evergrow.config'
+import type { Catalog } from '../catalog'
 import type { Cell, CellMap } from '../cells'
 import { key } from '../grid'
 import type { PlacedItem, PlacedItems } from '../placement'
@@ -37,4 +38,4 @@ export const placed = (uid: string, def: ItemDef, x = 0, z = 0, rot: PlacedItem[
 export const itemsOf = (...list: ReadonlyArray<PlacedItem>): PlacedItems =>
   new Map(list.map((it) => [it.uid, it]))
 
-export const catalogOf = (...defs: ItemDef[]): ReadonlyMap<string, ItemDef> => new Map(defs.map((def) => [def.id, def]))
+export const catalogOf = (...defs: ItemDef[]): Catalog => new Map(defs.map((def) => [def.id, def]))

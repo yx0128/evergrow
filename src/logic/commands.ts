@@ -1,6 +1,7 @@
-import { CONFIG, type InvalidReason, type ItemDef } from '../config/evergrow.config'
+import { CONFIG, type InvalidReason } from '../config/evergrow.config'
+import type { Catalog } from './catalog'
 import { apply } from './commandApply'
-import { inverseWith, invalid, valid, withWorld } from './commandHelpers'
+import { snapshotInverse, invalid, valid, withWorld } from './commandHelpers'
 import { validate } from './commandValidate'
 import type {
   ApplyResult,
@@ -30,6 +31,7 @@ export type {
 
 export const EMPTY_HISTORY: History = { past: [], future: [] }
 
+/** Refuse an undo that would make coins or inventory negative (D030). */
 function validateInverse(inverse: Inverse, state: WorldState): ValidateResult {
   if (state.coins + inverse.coinsDelta < 0) return invalid('unaffordable')
   for (const { id, delta } of inverse.inventoryDeltas) {
@@ -38,6 +40,7 @@ function validateInverse(inverse: Inverse, state: WorldState): ValidateResult {
   return valid()
 }
 
+/** Add a history entry, dropping the oldest beyond `CONFIG.history.limit` (D032). */
 function appendPast(
   history: History,
   entry: HistoryEntry,
@@ -56,6 +59,7 @@ function emptyDeltaSum(): DeltaSum {
   return { coinsDelta: 0, inventoryDeltas: new Map() }
 }
 
+/** Add one sub-command's inverse deltas to the batch total. */
 function addInverseDeltas(sum: DeltaSum, inverse: Inverse): void {
   sum.coinsDelta += inverse.coinsDelta
   for (const { id, delta } of inverse.inventoryDeltas) {
@@ -63,18 +67,20 @@ function addInverseDeltas(sum: DeltaSum, inverse: Inverse): void {
   }
 }
 
-function inverseWithDeltas(state: WorldState, sum: DeltaSum): Inverse {
-  return inverseWith(
+/** Undo data for a batch from its summed inverse deltas. */
+function inverseFromSum(state: WorldState, sum: DeltaSum): Inverse {
+  return snapshotInverse(
     state,
     sum.coinsDelta,
     [...sum.inventoryDeltas].map(([id, delta]) => ({ id, delta })),
   )
 }
 
+/** Validate a command and apply it only if it is valid. */
 function validateAndApply(
   command: Command,
   state: WorldState,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ):
   | { readonly ok: true; readonly applied: ApplyResult }
   | { readonly ok: false; readonly reason: InvalidReason } {
@@ -83,6 +89,7 @@ function validateAndApply(
   return { ok: true, applied: apply(command, state, catalog) }
 }
 
+/** Build the successful result for a recorded command. */
 function appliedResult(
   state: WorldState,
   history: History,
@@ -101,7 +108,7 @@ export function execute(
   history: History,
   state: WorldState,
   command: Command,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): OperationResult {
   const outcome = validateAndApply(command, state, catalog)
   if (!outcome.ok) return { ok: false, reason: outcome.reason, state, history }
@@ -122,7 +129,7 @@ export function executeBatch(
   history: History,
   state: WorldState,
   commands: readonly Command[],
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): BatchResult {
   if (commands.length === 0) throw new Error('An empty batch is not allowed')
   for (const command of commands) {
@@ -160,7 +167,7 @@ export function executeBatch(
     ...appliedResult(
       working,
       history,
-      { command: batch, inverse: inverseWithDeltas(state, sum) },
+      { command: batch, inverse: inverseFromSum(state, sum) },
       [],
     ),
     skipped,
@@ -171,7 +178,7 @@ export function executeBatch(
 export function undo(
   history: History,
   state: WorldState,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): OperationResult {
   const entry = history.past[history.past.length - 1]
   if (!entry) throw new Error('Nothing to undo')
@@ -193,7 +200,7 @@ export function undo(
 export function redo(
   history: History,
   state: WorldState,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): OperationResult {
   const entry = history.future[history.future.length - 1]
   if (!entry) throw new Error('Nothing to redo')
@@ -210,7 +217,7 @@ export function redo(
     return appliedResult(
       working,
       history,
-      { command: entry.command, inverse: inverseWithDeltas(state, sum) },
+      { command: entry.command, inverse: inverseFromSum(state, sum) },
       history.future.slice(0, -1),
     )
   }

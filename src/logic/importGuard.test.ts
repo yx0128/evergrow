@@ -17,6 +17,7 @@ const FORBIDDEN_IMPORTS = [
 
 const SPECIFIER = /(?:\bfrom\s*|\bimport\s*\(\s*|\bimport\s*)['"]([^'"]+)['"]/g
 
+/** Remove comments before matching; `//` only counts at a line start or after whitespace, so URLs survive. */
 function stripComments(source: string): string {
   return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/gm, '$1')
 }

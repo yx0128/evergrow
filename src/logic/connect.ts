@@ -1,5 +1,4 @@
-import type { ItemDef } from '../config/evergrow.config'
-import { itemDefinition } from './catalog'
+import { itemDefinition, type Catalog } from './catalog'
 import type { GridPoint } from './grid'
 import { key, neighbours } from './grid'
 import type { Occupancy, PlacedItems } from './placement'
@@ -15,7 +14,7 @@ export function getConnectionMask(
   uid: string,
   items: PlacedItems,
   occupancy: Occupancy,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): number {
   const self = items.get(uid)
   if (!self) return 0

@@ -1,8 +1,11 @@
 import type { ItemDef } from '../config/evergrow.config'
 
+/** Item definitions keyed by id. */
+export type Catalog = ReadonlyMap<string, ItemDef>
+
 /** Catalog lookup shared by item placement, connection and level logic. */
 export function itemDefinition(
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
   id: string,
 ): ItemDef {
   const def = catalog.get(id)

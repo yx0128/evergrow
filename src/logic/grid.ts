@@ -62,17 +62,17 @@ export function startZoneBounds(): GridBounds {
   return boundsForSize(CONFIG.world.startZone)
 }
 
-export function insideBounds(x: number, z: number, bounds: GridBounds): boolean {
+export function isInBounds(x: number, z: number, bounds: GridBounds): boolean {
   if (!Number.isInteger(x) || !Number.isInteger(z)) return false
   return x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ
 }
 
 export function isInWorld(x: number, z: number): boolean {
-  return insideBounds(x, z, worldBounds())
+  return isInBounds(x, z, worldBounds())
 }
 
-export function isWithinStartZone(x: number, z: number): boolean {
-  return insideBounds(x, z, startZoneBounds())
+export function isInStartZone(x: number, z: number): boolean {
+  return isInBounds(x, z, startZoneBounds())
 }
 
 /** Chebyshev (ring) distance between two cells. */
@@ -86,7 +86,7 @@ export function chebyshevDistance(a: GridPoint, b: GridPoint): number {
  */
 export function isBuildable(x: number, z: number, cells: GridCells): boolean {
   if (!isInWorld(x, z)) return false
-  if (isWithinStartZone(x, z)) return true
+  if (isInStartZone(x, z)) return true
 
   const point = { x, z }
   for (const cell of cells.values()) {

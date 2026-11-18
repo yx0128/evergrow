@@ -5,7 +5,7 @@ import {
   type Rotation,
   type TileType,
 } from '../config/evergrow.config'
-import { itemDefinition } from './catalog'
+import { itemDefinition, type Catalog } from './catalog'
 import type { Cell, CellMap } from './cells'
 import { getFootprintCells } from './footprint'
 import { isBuildable, isInWorld, key } from './grid'
@@ -41,7 +41,7 @@ export interface LevelRange {
 /** Map every footprint cell of every placed item to that item's uid. */
 export function buildOccupancy(
   items: PlacedItems,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): Occupancy {
   const occupancy = new Map<string, string>()
   for (const item of items.values()) {
@@ -78,7 +78,7 @@ export function getLevelRange(
     readonly occupancy: Occupancy
     readonly items: PlacedItems
   },
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): LevelRange | null {
   const uid = world.occupancy.get(key(x, z))
   if (uid !== undefined) {
@@ -97,7 +97,7 @@ export function getLevelRange(
  * move onto its own cells. Empty footprint cells become level-1 auto tiles.
  */
 export function validatePlacement(
-  item: ItemDef,
+  def: ItemDef,
   x: number,
   z: number,
   rot: Rotation,
@@ -105,7 +105,7 @@ export function validatePlacement(
   state: PlacementState,
   ignoreUid?: string,
 ): PlacementResult {
-  const footprint = getFootprintCells(item, x, z, rot)
+  const footprint = getFootprintCells(def, x, z, rot)
 
   for (const point of footprint) {
     if (!isInWorld(point.x, point.z)) return { ok: false, reason: 'outsideWorld' }
@@ -125,12 +125,12 @@ export function validatePlacement(
   }
 
   const needsAutoTile = footprint.some((p) => !state.cells.has(key(p.x, p.z)))
-  if (needsAutoTile && !item.allowedTiles.includes(autoTile)) {
+  if (needsAutoTile && !def.allowedTiles.includes(autoTile)) {
     return { ok: false, reason: 'wrongTile' }
   }
   for (const point of footprint) {
     const cell = state.cells.get(key(point.x, point.z))
-    if (cell && !item.allowedTiles.includes(cell.type)) {
+    if (cell && !def.allowedTiles.includes(cell.type)) {
       return { ok: false, reason: 'wrongTile' }
     }
   }

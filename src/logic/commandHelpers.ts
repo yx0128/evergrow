@@ -1,5 +1,5 @@
 import type { InvalidReason, ItemDef } from '../config/evergrow.config'
-import { itemDefinition } from './catalog'
+import { itemDefinition, type Catalog } from './catalog'
 import type { CellMap, CellResult } from './cells'
 import { getFootprintCells } from './footprint'
 import {
@@ -7,12 +7,13 @@ import {
   validatePlacement,
   type PlacedItem,
   type PlacedItems,
+  type PlacementResult,
   type PlacementState,
 } from './placement'
 import type {
-  Command,
   Inverse,
   InventoryDelta,
+  PlacementCommand,
   ValidateResult,
   WorldState,
 } from './commandTypes'
@@ -31,6 +32,7 @@ export function requireItem(state: WorldState, uid: string): PlacedItem {
   return item
 }
 
+/** Apply inventory deltas, deleting entries that reach zero. */
 function changeInventory(
   inventory: WorldState['inventory'],
   deltas: readonly InventoryDelta[],
@@ -55,10 +57,11 @@ export interface WorldChanges {
   readonly inventoryDeltas?: readonly InventoryDelta[]
 }
 
+/** Build the next state, rebuilding occupancy only when the items map changed. */
 export function withWorld(
   state: WorldState,
   changes: WorldChanges,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
 ): WorldState {
   const items = changes.items ?? state.items
   return {
@@ -70,7 +73,8 @@ export function withWorld(
   }
 }
 
-export function inverseWith(
+/** Undo data from the current cells and items, using deltas that are already inverted. */
+export function snapshotInverse(
   state: WorldState,
   coinsDelta: number,
   inventoryDeltas: readonly InventoryDelta[],
@@ -83,20 +87,22 @@ export function inverseWith(
   }
 }
 
-export function inverseOf(
+/** Undo data for a command, negating the coin and inventory deltas it applied. */
+export function inverseOfForwardDeltas(
   state: WorldState,
   coinsDelta: number,
   inventoryDeltas: readonly InventoryDelta[],
 ): Inverse {
-  return inverseWith(state, -coinsDelta, negate(inventoryDeltas))
+  return snapshotInverse(state, -coinsDelta, negate(inventoryDeltas))
 }
 
+/** Run the placement rules for a place or move command. */
 export function checkPlacement(
-  command: Extract<Command, { kind: 'place' | 'move' }>,
+  command: PlacementCommand,
   def: ItemDef,
   state: PlacementState,
   ignoreUid?: string,
-) {
+): PlacementResult {
   return validatePlacement(
     def,
     command.x,
@@ -108,10 +114,11 @@ export function checkPlacement(
   )
 }
 
+/** Apply an edit to each footprint cell in order, stopping at the first failure. */
 export function editFootprint(
   state: WorldState,
   item: PlacedItem,
-  catalog: ReadonlyMap<string, ItemDef>,
+  catalog: Catalog,
   edit: (cells: CellMap, x: number, z: number) => CellResult,
 ): CellResult {
   const def = itemDefinition(catalog, item.id)

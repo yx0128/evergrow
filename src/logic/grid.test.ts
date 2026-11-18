@@ -4,10 +4,10 @@ import {
   boundsForSize,
   chebyshevDistance,
   DIRECTIONS,
-  insideBounds,
+  isInBounds,
   isBuildable,
   isInWorld,
-  isWithinStartZone,
+  isInStartZone,
   key,
   landBounds,
   neighbour,
@@ -92,8 +92,8 @@ describe('bounds', () => {
     expect(boundsForSize(5)).toEqual({ minX: -2, maxX: 2, minZ: -2, maxZ: 2 })
   })
 
-  it('insideBounds rejects z past maxZ', () => {
-    expect(insideBounds(1, 3, { minX: 0, maxX: 2, minZ: 0, maxZ: 2 })).toBe(false)
+  it('isInBounds rejects z past maxZ', () => {
+    expect(isInBounds(1, 3, { minX: 0, maxX: 2, minZ: 0, maxZ: 2 })).toBe(false)
     expect(isInWorld(0, HALF_WORLD)).toBe(false)
   })
 
@@ -102,10 +102,10 @@ describe('bounds', () => {
     expect(isInWorld(HALF_WORLD - 1, -HALF_WORLD)).toBe(true)
     expect(isInWorld(-HALF_WORLD - 1, 0)).toBe(false)
     expect(isInWorld(HALF_WORLD, 0)).toBe(false)
-    expect(isWithinStartZone(-HALF_START, HALF_START - 1)).toBe(true)
-    expect(isWithinStartZone(-HALF_START - 1, 0)).toBe(false)
-    expect(isWithinStartZone(HALF_START, 0)).toBe(false)
-    expect(insideBounds(0, 0, { minX: 1, maxX: 2, minZ: 1, maxZ: 2 })).toBe(false)
+    expect(isInStartZone(-HALF_START, HALF_START - 1)).toBe(true)
+    expect(isInStartZone(-HALF_START - 1, 0)).toBe(false)
+    expect(isInStartZone(HALF_START, 0)).toBe(false)
+    expect(isInBounds(0, 0, { minX: 1, maxX: 2, minZ: 1, maxZ: 2 })).toBe(false)
   })
 
   it('rejects non-integer and NaN coordinates', () => {
@@ -116,7 +116,7 @@ describe('bounds', () => {
       [Infinity, 0],
     ]) {
       expect(isInWorld(x, z)).toBe(false)
-      expect(isWithinStartZone(x, z)).toBe(false)
+      expect(isInStartZone(x, z)).toBe(false)
       expect(isBuildable(x, z, new Map())).toBe(false)
     }
   })
