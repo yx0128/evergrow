@@ -289,3 +289,69 @@ describe('validatePlacement', () => {
     })
   })
 })
+
+describe('buildOccupancy with a non-square footprint', () => {
+  it('follows the rotated footprint', () => {
+    const bench = item({ id: 'bench', footprint: [2, 1] })
+    const withBench = new Map<string, ItemDef>([[bench.id, bench]])
+    const occupancy = buildOccupancy(itemsOf(placed('b', bench, 0, 0, 1)), withBench)
+    expect([...occupancy.keys()]).toEqual(['0,0', '0,1'])
+  })
+})
+
+describe('validatePlacement checks every footprint cell', () => {
+  it('returns outsideWorld when only the min corner is past the world edge', () => {
+    expect(validatePlacement(cottage, -HALF_WORLD - 1, 0, 0, 'grass', stateOf(itemsOf()))).toEqual({
+      ok: false,
+      reason: 'outsideWorld',
+    })
+  })
+
+  it('returns outsideBuildableZone when only the far cells leave the zone', () => {
+    expect(validatePlacement(cottage, 4, 0, 0, 'grass', stateOf(itemsOf()))).toEqual({
+      ok: false,
+      reason: 'outsideBuildableZone',
+    })
+  })
+
+  it('returns outsideBuildableZone when only the anchor cells leave the zone', () => {
+    expect(validatePlacement(cottage, -6, 0, 0, 'grass', stateOf(itemsOf()))).toEqual({
+      ok: false,
+      reason: 'outsideBuildableZone',
+    })
+  })
+
+  it('returns occupied when only a middle footprint cell is covered', () => {
+    const state = stateOf(itemsOf(placed('l', lamp, 1, 0)))
+    expect(validatePlacement(cottage, 0, 0, 0, 'grass', state)).toEqual({
+      ok: false,
+      reason: 'occupied',
+    })
+  })
+
+  it('returns wrongTile when only the last cell has a disallowed type', () => {
+    const cells = mapWith(cell(0, 0), cell(1, 0), cell(0, 1), cell(1, 1, 'water'))
+    expect(validatePlacement(cottage, 0, 0, 0, 'grass', stateOf(itemsOf(), cells))).toEqual({
+      ok: false,
+      reason: 'wrongTile',
+    })
+  })
+
+  it('returns unevenGround when only the last cell differs', () => {
+    const cells = mapWith(cell(0, 0), cell(1, 0), cell(0, 1), cell(1, 1, 'grass', 2))
+    expect(validatePlacement(cottage, 0, 0, 0, 'grass', stateOf(itemsOf(), cells))).toEqual({
+      ok: false,
+      reason: 'unevenGround',
+    })
+  })
+
+  it('creates auto tiles of the requested type, not the default tile', () => {
+    const result = validatePlacement(cottage, 0, 0, 0, 'land', stateOf(itemsOf()))
+    expect(result.ok && result.autoTiles.map((it) => it.type)).toEqual([
+      'land',
+      'land',
+      'land',
+      'land',
+    ])
+  })
+})

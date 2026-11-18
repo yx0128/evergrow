@@ -72,3 +72,11 @@ describe('validateCatalog', () => {
     )
   })
 })
+
+describe('validateCatalog footprint range', () => {
+  it('reports an invalid footprint for zero depth', () => {
+    expect(validateCatalog([{ ...validItem, footprint: [2, 0] }], [])).toContain(
+      'invalid footprint: cottage',
+    )
+  })
+})

@@ -66,3 +66,10 @@ describe('getFootprintCells', () => {
     expect(getFootprintCells(fence, 4, 5, 3)).toEqual([{ x: 4, z: 5 }])
   })
 })
+
+describe('getFootprintCells with a non-square footprint', () => {
+  it('swaps width and depth at rot 1', () => {
+    const bench = item({ id: 'bench', footprint: [2, 1] })
+    expect(getFootprintCells(bench, 0, 0, 1)).toEqual([{ x: 0, z: 0 }, { x: 0, z: 1 }])
+  })
+})

@@ -804,3 +804,24 @@ Verification:
 - Both temporary mutations were applied and restored on their own: `some` → `every`
   failed the partial-footprint test, and `needsAutoTile &&` → `false &&` failed the
   auto-tile and partial-footprint tests.
+
+### 2026-11-18 — fix: close mutation test gaps in footprints, placement and commands
+
+Done:
+
+- Added 23 tests: non-square footprint rotation and occupancy, a zero-depth catalog
+  footprint, per-cell placement checks for the world edge, buildable zone, occupancy,
+  tile type, level and auto tile type, and command pricing, inventory, move, batch and
+  history-order behaviour.
+- Production code is unchanged.
+
+Why: a mutation review found 31 deliberate bugs that `npm test` did not catch.
+
+Verification:
+
+- `npm test` 250 → 273 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- All 31 mutations were applied one at a time and each made at least one test fail;
+  every production file was restored. `git diff` for `footprint.ts`, `catalog.ts`,
+  `placement.ts` and `commands.ts` is empty.
+- The three behaviour-neutral history-cap mutations were excluded as instructed.
