@@ -308,6 +308,15 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 
 ### `src/logic/commands.ts`
 
+The module is split across five files; other code imports from `./commands` only.
+
+- `commandTypes.ts` — the world state, command and result types.
+- `commandHelpers.ts` — validation/apply helpers and the inverse and world builders.
+- `commandValidate.ts` — `validate` and its tile check.
+- `commandApply.ts` — `apply` and its placement and cell helpers.
+- `commands.ts` — the history code (`execute`, `executeBatch`, `undo`, `redo`) and the
+  public entry point.
+
 - `WorldState { cells, items, occupancy, inventory, coins }`. After every apply,
   undo and redo, `occupancy` equals `buildOccupancy(items, catalog)`. Inventory
   entries are deleted when their count reaches 0.
@@ -929,6 +938,29 @@ Verification:
 - Each of `inverse: inverseOf(state, 0, [])`, `of getFootprintCells(`,
   `validatePlacement(` and `buildOccupancy(` appears exactly once; `applyInverse` is
   gone.
+- `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+
+### 2026-11-18 — fix: split world commands into modules
+
+Done:
+
+- Split `src/logic/commands.ts` into `commandTypes.ts`, `commandHelpers.ts`,
+  `commandValidate.ts`, `commandApply.ts` and the remaining history code in
+  `commands.ts`; no logic, names, signatures or comments changed.
+- `commands.ts` stays the public entry point and exports only the listed values and
+  types. Nothing imports `./commands` from the four new modules.
+- Updated the current commands reference section with the five files and their roles.
+
+Why: the file had grown to 655 lines. Smaller modules make the upcoming naming and
+type cleanup easier without changing behaviour.
+
+Verification:
+
+- `git diff --stat main -- src` shows only `src/logic/commands.ts` and the four new
+  files; every file is under 300 lines.
+- The normalised moved-code diff prints `moved code matches`.
 - `npm test` 261/261, `npm run build` and `npm run lint` pass (existing chunk-size
   warning only).
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
