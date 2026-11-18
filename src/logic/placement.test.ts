@@ -3,6 +3,7 @@ import { CONFIG, type ItemDef } from '../config/evergrow.config'
 import type { Cell, CellMap } from './cells'
 import {
   buildOccupancy,
+  getLevelRange,
   itemAt,
   validatePlacement,
   type Occupancy,
@@ -75,6 +76,96 @@ const cellsIn = (x: number, z: number, w: number, d: number): Cell[] => {
   }
   return result
 }
+
+describe('getLevelRange', () => {
+  const range = { min: CONFIG.world.minStack, max: CONFIG.world.maxStack }
+
+  it('returns minStack..maxStack for empty and filled cells (§5.4)', () => {
+    const empty = itemsOf()
+    expect(
+      getLevelRange(0, 0, { cells: mapWith(), occupancy: new Map(), items: empty }, catalog),
+    ).toEqual(range)
+    expect(
+      getLevelRange(
+        0,
+        0,
+        { cells: mapWith(cell(0, 0, 'grass', 4)), occupancy: new Map(), items: empty },
+        catalog,
+      ),
+    ).toEqual(range)
+  })
+
+  it('returns null under any item', () => {
+    const cottageItems = itemsOf(placed('a', cottage, 1, 1))
+    const cottageOccupancy = buildOccupancy(cottageItems, catalog)
+    expect(
+      getLevelRange(1, 1, { cells: mapWith(), occupancy: cottageOccupancy, items: cottageItems }, catalog),
+    ).toBeNull()
+
+    const lampItems = itemsOf(placed('a', lamp, 0, 0))
+    const lampOccupancy = buildOccupancy(lampItems, catalog)
+    expect(
+      getLevelRange(0, 0, { cells: mapWith(), occupancy: lampOccupancy, items: lampItems }, catalog),
+    ).toBeNull()
+  })
+
+  it('throws when an occupancy uid has no matching item', () => {
+    const occupancy = new Map([[key(0, 0), 'ghost']])
+
+    expect(() =>
+      getLevelRange(0, 0, { cells: mapWith(), occupancy, items: itemsOf() }, catalog),
+    ).toThrow('Unknown item uid: ghost')
+  })
+
+  it('throws when the item id is missing from the catalog', () => {
+    const items = itemsOf(placed('a', cottage, 0, 0))
+    const occupancy = new Map([[key(0, 0), 'a']])
+
+    expect(() =>
+      getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, new Map()),
+    ).toThrow('Unknown item id: cottage')
+  })
+
+  it('looks up x,z and not z,x', () => {
+    const items = itemsOf(placed('a', lamp, 1, 2))
+    const occupancy = buildOccupancy(items, catalog)
+
+    expect(getLevelRange(1, 2, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
+    expect(getLevelRange(2, 1, { cells: mapWith(), occupancy, items }, catalog)).toEqual(
+      range,
+    )
+  })
+
+  it('treats an empty-string uid as an item', () => {
+    const items = itemsOf(placed('', lamp, 0, 0))
+    const occupancy = new Map([[key(0, 0), '']])
+
+    expect(getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
+  })
+
+  it('ignores neighbouring heights', () => {
+    const cells = mapWith(
+      cell(0, 0, 'grass', 1),
+      cell(0, -1, 'grass', 1),
+      cell(1, 0, 'grass', 1),
+      cell(0, 1, 'grass', 1),
+      cell(-1, 0, 'grass', 1),
+    )
+
+    expect(getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog)).toEqual(
+      range,
+    )
+  })
+
+  it('is the full range for every tile type', () => {
+    for (const type of ['grass', 'land', 'water'] as const) {
+      const cells = mapWith(cell(0, 0, type, 1))
+      expect(
+        getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog),
+      ).toEqual(range)
+    }
+  })
+})
 
 describe('buildOccupancy', () => {
   it('maps every footprint cell of every item to its uid', () => {

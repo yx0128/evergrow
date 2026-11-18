@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { findStorageAccess } from './storageGuard'
+
+const STORAGE_ACCESS = /\b(?:local|session)Storage\b/
+const ALLOWED = new Set(['logic/save.ts'])
+
+function stripComments(source: string): string {
+  return source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|\s)\/\/[^\n]*/gm, '$1')
+}
+
+/** Return files that bypass the storage helper with direct web storage access. */
+function findStorageAccess(files: Record<string, string>): string[] {
+  const offenders: string[] = []
+  for (const [path, content] of Object.entries(files)) {
+    const relative = path.replace(/^\/?src\//, '')
+    if (relative.endsWith('.test.ts') || relative.endsWith('.test.tsx')) continue
+    if (ALLOWED.has(relative)) continue
+    if (STORAGE_ACCESS.test(stripComments(content))) offenders.push(relative)
+  }
+  return offenders
+}
 
 const modules = import.meta.glob('/src/**/*.{ts,tsx}', {
   query: '?raw',

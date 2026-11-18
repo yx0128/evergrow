@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { ItemDef } from '../config/evergrow.config'
-import { getFootprintCells, rotatedSize, type Rotation } from './footprint'
+import type { ItemDef, Rotation } from '../config/evergrow.config'
+import { getFootprintCells, rotatedSize } from './footprint'
 
 const item = (overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>): ItemDef => ({
   name: overrides.id,

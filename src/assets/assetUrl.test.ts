@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { CONFIG } from '../config/evergrow.config'
-import { assetUrl, storageKey } from './assetUrl'
+import { assetUrl } from './assetUrl'
 
 afterEach(() => {
   vi.unstubAllEnvs()
@@ -18,12 +17,5 @@ describe('assetUrl', () => {
   it('uses the production GitHub Pages base', () => {
     vi.stubEnv('BASE_URL', '/evergrow/')
     expect(assetUrl('assets/models/cottage.glb')).toBe('/evergrow/assets/models/cottage.glb')
-  })
-})
-
-describe('storageKey', () => {
-  it('namespaces keys for the shared github.io origin', () => {
-    expect(storageKey('save')).toBe(`${CONFIG.ui.storagePrefix}save`)
-    expect(storageKey('save')).toBe('evergrow:save')
   })
 })

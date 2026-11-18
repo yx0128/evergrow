@@ -1,12 +1,5 @@
-import {
-  CONFIG,
-  type InvalidReason,
-  type ItemDef,
-  type TileType,
-} from '../config/evergrow.config'
-import { itemDefinition } from './catalog'
+import { CONFIG, type InvalidReason, type TileType } from '../config/evergrow.config'
 import { isBuildable, isInWorld, key } from './grid'
-import type { Occupancy, PlacedItems } from './placement'
 
 /** One column of tiles; all tiles in the column share `type`. */
 export interface Cell {
@@ -23,22 +16,12 @@ export type CellResult =
   | { readonly ok: true; readonly cells: CellMap }
   | { readonly ok: false; readonly reason: InvalidReason }
 
-export interface LevelRange {
-  readonly min: number
-  readonly max: number
-}
-
 function levelReason(level: number): InvalidReason | null {
   if (level === Infinity) return 'maxStack'
-  if (level === -Infinity) return 'minStack'
   if (!Number.isInteger(level)) return 'minStack'
   if (level > CONFIG.world.maxStack) return 'maxStack'
   if (level < CONFIG.world.minStack) return 'minStack'
   return null
-}
-
-export function getCell(cells: CellMap, x: number, z: number): Cell | undefined {
-  return cells.get(key(x, z))
 }
 
 /** Add or replace a cell. Returns a new map; the input is never mutated. */
@@ -49,13 +32,6 @@ export function setCell(cells: CellMap, cell: Cell): CellResult {
   const next = new Map(cells)
   next.set(key(cell.x, cell.z), cell)
   return { ok: true, cells: next }
-}
-
-/** Remove a cell (no-op when it does not exist). Returns a new map. */
-export function removeCell(cells: CellMap, x: number, z: number): CellMap {
-  const next = new Map(cells)
-  next.delete(key(x, z))
-  return next
 }
 
 /**
@@ -119,30 +95,4 @@ export function digUp(cells: CellMap, x: number, z: number): CellResult {
     next.delete(cellKey)
   }
   return { ok: true, cells: next }
-}
-
-/**
- * Height slider range for a column (§5.4, §6.4, D029). A cell under any item
- * returns null because tile type and height are set from the item popover.
- * Missing occupancy or catalog data throws.
- */
-export function getLevelRange(
-  x: number,
-  z: number,
-  world: {
-    readonly cells: CellMap
-    readonly occupancy: Occupancy
-    readonly items: PlacedItems
-  },
-  catalog: ReadonlyMap<string, ItemDef>,
-): LevelRange | null {
-  const uid = world.occupancy.get(key(x, z))
-  if (uid !== undefined) {
-    const item = world.items.get(uid)
-    if (!item) throw new Error(`Unknown item uid: ${uid}`)
-    // Called only to throw on a missing catalog entry; the result isn't needed.
-    itemDefinition(catalog, item.id)
-    return null
-  }
-  return { min: CONFIG.world.minStack, max: CONFIG.world.maxStack }
 }

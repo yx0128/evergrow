@@ -402,10 +402,7 @@ export function apply(
       }
     }
     case 'paint': {
-      const item = itemAt(command.x, command.z, state.occupancy, state.items)
-      const cells = item
-        ? unwrapCells(setType(state.cells, command.x, command.z, command.type))
-        : unwrapCells(paint(state.cells, command.x, command.z, command.type))
+      const cells = unwrapCells(paint(state.cells, command.x, command.z, command.type))
       return {
         state: withWorld(state, { cells }, catalog),
         inverse: inverseOf(state, 0, []),

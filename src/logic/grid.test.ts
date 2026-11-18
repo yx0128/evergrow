@@ -12,9 +12,6 @@ import {
   landBounds,
   neighbour,
   neighbours,
-  parseKey,
-  startZoneBounds,
-  worldBounds,
 } from './grid'
 import type { GridCells } from './grid'
 
@@ -28,25 +25,19 @@ const typedTile = (
   type: 'grass' | 'land' | 'water',
 ): GridCells => new Map([[key(x, z), { x, z, type }]])
 
-describe('key / parseKey', () => {
-  it('round-trips positive, negative and zero coordinates', () => {
+describe('key', () => {
+  it('formats positive, negative and zero coordinates as x,z', () => {
     for (const [x, z] of [
       [0, 0],
       [3, -7],
       [-HALF_WORLD, HALF_WORLD - 1],
     ]) {
-      expect(parseKey(key(x, z))).toEqual({ x, z })
+      expect(key(x, z)).toBe(`${x},${z}`)
     }
   })
 
   it('formats the sparse-map key as "x,z"', () => {
     expect(key(2, -3)).toBe('2,-3')
-  })
-
-  it('throws an Error naming a malformed key', () => {
-    for (const invalid of ['', '1', '1,2,3', 'a,b', '1.5,2', ' 1,2', '1,2x']) {
-      expect(() => parseKey(invalid)).toThrow(`Invalid cell key: ${invalid}`)
-    }
   })
 
   it('throws when key coordinates are not integers', () => {
@@ -99,24 +90,6 @@ describe('bounds', () => {
 
   it('boundsForSize floors odd sizes', () => {
     expect(boundsForSize(5)).toEqual({ minX: -2, maxX: 2, minZ: -2, maxZ: 2 })
-  })
-
-  it('worldBounds honours an explicit size', () => {
-    expect(worldBounds(4)).toEqual({ minX: -2, maxX: 1, minZ: -2, maxZ: 1 })
-  })
-
-  it('startZoneBounds honours an explicit size', () => {
-    expect(startZoneBounds(6)).toEqual({ minX: -3, maxX: 2, minZ: -3, maxZ: 2 })
-  })
-
-  it('isInWorld honours a custom maxSize', () => {
-    expect(isInWorld(1, 0, 4)).toBe(true)
-    expect(isInWorld(2, 0, 4)).toBe(false)
-  })
-
-  it('isWithinStartZone honours a custom startZone', () => {
-    expect(isWithinStartZone(2, 0, 6)).toBe(true)
-    expect(isWithinStartZone(3, 0, 6)).toBe(false)
   })
 
   it('insideBounds rejects z past maxZ', () => {

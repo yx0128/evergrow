@@ -25,21 +25,12 @@ export const DIRECTIONS: Readonly<Record<Direction, GridPoint>> = {
   west: { x: -1, z: 0 },
 }
 
-const KEY_PATTERN = /^(-?\d+),(-?\d+)$/
-
 /** Stable sparse-map key for integer cell coordinates. Throws on non-integers. */
 export function key(x: number, z: number): string {
   if (!Number.isInteger(x) || !Number.isInteger(z)) {
     throw new Error(`Invalid cell coordinates: ${x},${z}`)
   }
   return `${x},${z}`
-}
-
-/** Inverse of {@link key}. Throws an Error naming the key when it is malformed. */
-export function parseKey(cellKey: string): GridPoint {
-  const match = KEY_PATTERN.exec(cellKey)
-  if (!match) throw new Error(`Invalid cell key: ${cellKey}`)
-  return { x: Number(match[1]), z: Number(match[2]) }
 }
 
 export function neighbour(x: number, z: number, direction: Direction): GridPoint {
@@ -63,12 +54,12 @@ export function boundsForSize(size: number): GridBounds {
   return { minX: min, maxX: min + size - 1, minZ: min, maxZ: min + size - 1 }
 }
 
-export function worldBounds(maxSize: number = CONFIG.world.maxSize): GridBounds {
-  return boundsForSize(maxSize)
+export function worldBounds(): GridBounds {
+  return boundsForSize(CONFIG.world.maxSize)
 }
 
-export function startZoneBounds(startZone: number = CONFIG.world.startZone): GridBounds {
-  return boundsForSize(startZone)
+export function startZoneBounds(): GridBounds {
+  return boundsForSize(CONFIG.world.startZone)
 }
 
 export function insideBounds(x: number, z: number, bounds: GridBounds): boolean {
@@ -76,12 +67,12 @@ export function insideBounds(x: number, z: number, bounds: GridBounds): boolean 
   return x >= bounds.minX && x <= bounds.maxX && z >= bounds.minZ && z <= bounds.maxZ
 }
 
-export function isInWorld(x: number, z: number, maxSize?: number): boolean {
-  return insideBounds(x, z, worldBounds(maxSize))
+export function isInWorld(x: number, z: number): boolean {
+  return insideBounds(x, z, worldBounds())
 }
 
-export function isWithinStartZone(x: number, z: number, startZone?: number): boolean {
-  return insideBounds(x, z, startZoneBounds(startZone))
+export function isWithinStartZone(x: number, z: number): boolean {
+  return insideBounds(x, z, startZoneBounds())
 }
 
 /** Chebyshev (ring) distance between two cells. */

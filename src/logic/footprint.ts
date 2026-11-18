@@ -1,8 +1,6 @@
 import type { ItemDef, Rotation } from '../config/evergrow.config'
 import type { GridPoint } from './grid'
 
-export type { Rotation }
-
 /**
  * Footprint anchor convention: `(x, z)` is the min-x/min-z corner of the footprint
  * after rotation. Every cell is `x..x+w'-1` and `z..z+d'-1`.

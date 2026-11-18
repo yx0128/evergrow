@@ -33,6 +33,11 @@ export type PlacementResult =
   | { readonly ok: true; readonly autoTiles: Cell[] }
   | { readonly ok: false; readonly reason: InvalidReason }
 
+export interface LevelRange {
+  readonly min: number
+  readonly max: number
+}
+
 /** Map every footprint cell of every placed item to that item's uid. */
 export function buildOccupancy(
   items: PlacedItems,
@@ -58,6 +63,32 @@ export function itemAt(
   const uid = occupancy.get(key(x, z))
   if (uid === undefined) return undefined
   return items.get(uid)
+}
+
+/**
+ * Height slider range for a column (§5.4, §6.4, D029). A cell under any item
+ * returns null because tile type and height are set from the item popover.
+ * Missing occupancy or catalog data throws.
+ */
+export function getLevelRange(
+  x: number,
+  z: number,
+  world: {
+    readonly cells: CellMap
+    readonly occupancy: Occupancy
+    readonly items: PlacedItems
+  },
+  catalog: ReadonlyMap<string, ItemDef>,
+): LevelRange | null {
+  const uid = world.occupancy.get(key(x, z))
+  if (uid !== undefined) {
+    const item = world.items.get(uid)
+    if (!item) throw new Error(`Unknown item uid: ${uid}`)
+    // Called only to throw on a missing catalog entry; the result isn't needed.
+    itemDefinition(catalog, item.id)
+    return null
+  }
+  return { min: CONFIG.world.minStack, max: CONFIG.world.maxStack }
 }
 
 /**

@@ -1,14 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CONFIG, type ItemDef } from '../config/evergrow.config'
-import {
-  digUp,
-  getLevelRange,
-  paint,
-  removeCell,
-  setCell,
-  setLevel,
-  setType,
-} from './cells'
+import { digUp, paint, setCell, setLevel, setType } from './cells'
 import type { CellMap } from './cells'
 import {
   EMPTY_HISTORY,
@@ -28,6 +20,7 @@ import { getFootprintCells, rotatedSize } from './footprint'
 import { isBuildable, landBounds, key } from './grid'
 import {
   buildOccupancy,
+  getLevelRange,
   itemAt,
   validatePlacement,
   type PlacedItems,
@@ -157,10 +150,6 @@ describe('logic purity', () => {
 
   it('setCell rejected level does not mutate the input', () => {
     expectPure((cells) => setCell(cells, { x: 5, z: 5, type: 'grass', level: 0 }))
-  })
-
-  it('removeCell does not mutate the input', () => {
-    expectPure((cells) => removeCell(cells, 0, 0))
   })
 
   it('setLevel does not mutate the input', () => {

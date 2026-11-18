@@ -182,7 +182,7 @@ docs/                           # progress, decisions, architecture, release doc
 4. Never store absolute Y. Derive it as `level * world.tileThickness`.
 5. Autosave to localStorage, debounced with `ui.autosaveDebounceMs`, including
    `saveSchemaVersion`. Every key must go through `storageKey()` in
-   `src/assets/assetUrl.ts`, which prefixes `ui.storagePrefix` (`evergrow:`) because
+   `src/logic/save.ts`, which prefixes `ui.storagePrefix` (`evergrow:`) because
    all `*.github.io` project sites share one origin.
 6. Never hard-code a leading-slash public URL. Build model, thumbnail, audio and font
    URLs with `assetUrl()` from `src/assets/assetUrl.ts`, and keep catalog paths
@@ -211,7 +211,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 248 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
+npm test         # 261 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -236,7 +236,6 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 ### `src/logic/grid.ts`
 
 - `key(x, z)` → `"x,z"`; **throws** on non-integer coordinates.
-- `parseKey(s)` → `{x,z}`; **throws** an Error naming malformed keys (never returns null).
 - `DIRECTIONS` / `neighbour(x,z,dir)` / `neighbours(x,z)` (N, E, S, W order).
   Axes: **+X east, +Z south, north = −Z**.
 - `boundsForSize(size)` uses `min = -floor(size/2)`, so 10 → −5..4 and 256 → −128..127.
@@ -252,33 +251,27 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 
 ### `src/logic/cells.ts`
 
-- `Cell { x, z, type, level }`, `CellMap = ReadonlyMap<string, Cell>`, `LevelRange`,
+- `Cell { x, z, type, level }`, `CellMap = ReadonlyMap<string, Cell>`,
   and `CellResult = { ok: true; cells: CellMap } | { ok: false; reason: InvalidReason }`.
 - `setCell(cells, cell)` and `setLevel(cells, x, z, level)` return `CellResult`.
   A level must be an integer in `CONFIG.world.minStack..maxStack`: above → `maxStack`,
   `+Infinity` → `maxStack`, and below `CONFIG.world.minStack`, `−Infinity`, NaN or a
   non-integer → `minStack` (new reason, "Minimum height reached").
   Rejected edits store nothing and leave the input untouched.
-- `removeCell(cells, x, z)` returns a new `CellMap`. `setType(cells, x, z, type)`
-  returns `CellResult`. `setLevel`/`setType` on an empty cell return
-  `{ ok: true, cells }` with the **same map** unchanged.
+- `setType(cells, x, z, type)` returns `CellResult`. `setLevel`/`setType` on an
+  empty cell return `{ ok: true, cells }` with the **same map** unchanged.
 - `paint(cells, x, z, type)`: invalid or out-of-world coordinates → `outsideWorld`
   before any lookup; existing cell → change type, keep level; empty cell →
   `outsideBuildableZone` if not buildable, otherwise a new level-1 cell (§5.3).
 - `digUp(cells, x, z)`: invalid or out-of-world coordinates → `outsideWorld` before
   any lookup; level > 1 → level − 1; level 1 → remove; empty in-world cell →
   unchanged (`{ ok: true, cells }`).
-- `getLevelRange(x, z, world, catalog)` → `LevelRange | null`, where
-  `world = { cells, occupancy, items }` and all parameters are required. It returns
-  `{ min: CONFIG.world.minStack, max: CONFIG.world.maxStack }` for bare tiles and
-  `null` under any item (tile settings come from the item, D029). An occupancy uid
-  with no item, or an item id missing from the catalog, throws.
 - Nothing is clamped and no input map is ever mutated.
 
 ### `src/logic/footprint.ts`
 
-- Re-exports `Rotation = 0 | 1 | 2 | 3`; each step is 90° clockwise seen from above
-  (+X east, +Z south, D017).
+- Uses `Rotation = 0 | 1 | 2 | 3` from the config; each step is 90° clockwise seen
+  from above (+X east, +Z south, D017).
 - Anchor convention: `(x, z)` is the footprint's min-x/min-z corner after rotation
   (D024). `getFootprintCells` covers `x..x+w'-1`, `z..z+d'-1`.
 - `rotatedSize(item, rot)` → `[w, d]`; a `w×d` footprint becomes `d×w` at rot 1 and 3.
@@ -289,7 +282,8 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 - `PlacedItem { uid, id, x, z, rot }` (§6.1),
   `PlacedItems = ReadonlyMap<uid, PlacedItem>` (D027),
   `Occupancy = ReadonlyMap<cellKey, uid>`, `PlacementState = { cells, occupancy }`,
-  and `PlacementResult = { ok: true; autoTiles: Cell[] } | { ok: false; reason }`.
+  `PlacementResult = { ok: true; autoTiles: Cell[] } | { ok: false; reason }`,
+  and `LevelRange = { min, max }`.
 - `buildOccupancy(items, catalog)` maps every rotated footprint cell to its uid and
   throws on an item id missing from the catalog. `itemAt(x, z, occupancy, items)`
   returns the covering item or `undefined`. Both read the item map directly by uid.
@@ -298,6 +292,11 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   `unevenGround`; the first failure wins. Empty cells count as level 1. `ignoreUid`
   accepts a moving item's own cells. On success `autoTiles` has one level-1 cell of
   `autoTile` for each empty footprint cell, in footprint order.
+- `getLevelRange(x, z, world, catalog)` → `LevelRange | null`, where
+  `world = { cells, occupancy, items }` and all parameters are required. It returns
+  `{ min: CONFIG.world.minStack, max: CONFIG.world.maxStack }` for bare tiles and
+  `null` under any item (tile settings come from the item, D029). An occupancy uid
+  with no item, or an item id missing from the catalog, throws.
 
 ### `src/logic/connect.ts`
 
@@ -347,6 +346,12 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
   `digUp` returns `underItem`; single-cell `setLevel` throws and points at
   `setLevelItem` (D029).
 
+### `src/logic/save.ts`
+
+- `storageKey(key)` prefixes `CONFIG.ui.storagePrefix` (`evergrow:`) so localStorage
+  keys are namespaced for the shared `*.github.io` origin (D005). There is no save or
+  load behaviour yet.
+
 ### `src/logic/importGuard.test.ts`
 
 Vitest-only guard. It reads every non-test `src/logic/**/*.ts` file raw and fails on
@@ -356,7 +361,7 @@ It was verified by temporarily adding a `three` import and watching the test fai
 
 ### `src/logic/purity.test.ts`
 
-Calls every exported map function and pure helper (`setCell`, `removeCell`,
+Calls every exported map function and pure helper (`setCell`,
 `setLevel`, `setType`, `paint`, `digUp`, `isBuildable`, `landBounds`, `getLevelRange`,
 `rotatedSize`, `getFootprintCells`, `buildOccupancy`, `itemAt`, `validatePlacement`,
 `getConnectionMask`), snapshotting inputs with `structuredClone` and asserting they
@@ -366,7 +371,7 @@ are deep-equal afterwards.
 
 1. Create `src/logic/grid.ts` and `src/logic/cells.ts` as above.
 2. Add `grid.test.ts`, `cells.test.ts`, `purity.test.ts` and `importGuard.test.ts`.
-3. Covered cases: key/parse round trip and throwing; N/E/S/W neighbours; start-zone
+3. Covered cases: key formatting and throwing; N/E/S/W neighbours; start-zone
    and world edges derived from `CONFIG`; 6 cells from a tile buildable and 7 not;
    outside `maxSize` rejected even inside the ring; single-cell `landBounds`;
    level 1/`maxStack` accepted and 0/`maxStack+1`/NaN/2.5/±Infinity rejected with the
@@ -869,3 +874,33 @@ Verification:
   chunk-size warning only).
 - `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
   lines.
+
+### 2026-11-18 — fix: remove dead code and relocate helpers
+
+Done:
+
+- Removed `getCell`, `removeCell`, `parseKey`, `KEY_PATTERN`, the `−Infinity`
+  `levelReason` branch and the unused `Rotation` re-export. `worldBounds`,
+  `startZoneBounds`, `isInWorld` and `isWithinStartZone` now always read `CONFIG`.
+- Simplified the `paint` apply branch in `commands.ts`; `validate` is unchanged.
+- Moved `getLevelRange` and `LevelRange` to `placement.ts` with the same signature and
+  behaviour, and moved their tests to `placement.test.ts`.
+- Deleted `src/assets/redirect.ts` and tested `public/404.html` directly. Inlined the
+  storage guard into its test, deleted both source files, and moved `storageKey` to
+  `src/logic/save.ts` with its test.
+- Updated the current PROGRESS reference sections and test count.
+- Tidied the `cells.ts` file ending, a `key` test title and the related notes.
+
+Why: a code-health review found dead exports, misplaced helpers and a test-only module.
+Behaviour is unchanged.
+
+Verification:
+
+- `git grep -nwE 'removeCell|parseKey|redirectTarget' -- src public` returns nothing;
+  `getCell` only appears as the local cells test helper, and `cells.ts` no longer
+  imports from `placement`.
+- `npm test` 273 → 261 tests. The 12 deleted tests covered removed code: `getCell` (1),
+  `removeCell` (5, including purity), `parseKey` (1), explicit grid sizes (4) and the
+  404 sync check against `redirectTarget` (1). `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.

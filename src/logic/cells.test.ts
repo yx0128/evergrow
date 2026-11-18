@@ -1,23 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import {
-  CONFIG,
-  type InvalidReason,
-  type ItemDef,
-  type TileType,
-} from '../config/evergrow.config'
-import {
-  digUp,
-  getCell,
-  getLevelRange,
-  paint,
-  removeCell,
-  setCell,
-  setLevel,
-  setType,
-} from './cells'
+import { CONFIG, type InvalidReason, type TileType } from '../config/evergrow.config'
+import { digUp, paint, setCell, setLevel, setType } from './cells'
 import type { Cell, CellMap, CellResult } from './cells'
 import { DIRECTIONS, key } from './grid'
-import { buildOccupancy, type PlacedItem, type PlacedItems } from './placement'
+import { getLevelRange } from './placement'
 
 const HALF_WORLD = CONFIG.world.maxSize / 2
 const HALF_START = CONFIG.world.startZone / 2
@@ -43,11 +29,7 @@ function expectFail(result: CellResult, reason: InvalidReason): void {
   expect(result).toEqual({ ok: false, reason })
 }
 
-describe('getCell', () => {
-  it('throws on non-integer coordinates', () => {
-    expect(() => getCell(mapWith(), 1.5, 0)).toThrow('Invalid cell coordinates: 1.5,0')
-  })
-})
+const getCell = (cells: CellMap, x: number, z: number) => cells.get(key(x, z))
 
 describe('setCell', () => {
   it('adds a level-1 cell without mutating the input map', () => {
@@ -95,40 +77,6 @@ describe('setCell', () => {
       expect([...cells]).toEqual(before)
       expect(cells.size).toBe(0)
     }
-  })
-})
-
-describe('removeCell', () => {
-  it('removes one cell and leaves the rest untouched', () => {
-    const cells = mapWith(cell(0, 0), cell(1, 0, 'land'))
-    const next = removeCell(cells, 0, 0)
-
-    expect(cells.size).toBe(2)
-    expect(next.size).toBe(1)
-    expect(next.has(key(0, 0))).toBe(false)
-    expect(next.has(key(1, 0))).toBe(true)
-  })
-
-  it('throws on non-integer coordinates', () => {
-    expect(() => removeCell(mapWith(), 1.5, 0)).toThrow(
-      'Invalid cell coordinates: 1.5,0',
-    )
-  })
-
-  it('removes x,z and not z,x', () => {
-    const cells = mapWith(cell(1, 2), cell(2, 1))
-    const next = removeCell(cells, 1, 2)
-
-    expect(next.has(key(1, 2))).toBe(false)
-    expect(next.has(key(2, 1))).toBe(true)
-  })
-
-  it('returns a new map when the cell does not exist', () => {
-    const cells = mapWith(cell(0, 0))
-    const next = removeCell(cells, 5, 5)
-
-    expect(next).not.toBe(cells)
-    expect(next).toEqual(cells)
   })
 })
 
@@ -304,125 +252,6 @@ describe('digUp', () => {
     expect(() => digUp(mapWith(), 0.5, 0)).not.toThrow()
     expectFail(digUp(mapWith(), 0.5, 0), 'outsideWorld')
     expectFail(digUp(mapWith(), NaN, 0), 'outsideWorld')
-  })
-})
-
-describe('getLevelRange', () => {
-  const item = (
-    overrides: Partial<ItemDef> & Pick<ItemDef, 'id' | 'footprint'>,
-  ): ItemDef => ({
-    name: overrides.id,
-    category: 'test',
-    price: 0,
-    defaultTile: 'grass',
-    allowedTiles: ['grass', 'land'],
-    connectable: false,
-      model: `assets/models/${overrides.id}.glb`,
-    thumb: `assets/thumbs/${overrides.id}.png`,
-    emissive: false,
-    ...overrides,
-  })
-  const lamp = item({ id: 'lamp', footprint: [1, 1] })
-  const cottage = item({ id: 'cottage', footprint: [2, 2] })
-  const catalog = new Map<string, ItemDef>([
-    [lamp.id, lamp],
-    [cottage.id, cottage],
-  ])
-  const placed = (
-    uid: string,
-    def: ItemDef,
-    x = 0,
-    z = 0,
-    rot: PlacedItem['rot'] = 0,
-  ): PlacedItem => ({ uid, id: def.id, x, z, rot })
-  const itemsOf = (...list: ReadonlyArray<PlacedItem>): PlacedItems =>
-    new Map(list.map((it) => [it.uid, it]))
-  const range = { min: MIN, max: MAX }
-
-  it('returns minStack..maxStack for empty and filled cells (§5.4)', () => {
-    const empty = itemsOf()
-    expect(
-      getLevelRange(0, 0, { cells: mapWith(), occupancy: new Map(), items: empty }, catalog),
-    ).toEqual(range)
-    expect(
-      getLevelRange(
-        0,
-        0,
-        { cells: mapWith(cell(0, 0, 'grass', 4)), occupancy: new Map(), items: empty },
-        catalog,
-      ),
-    ).toEqual(range)
-  })
-
-  it('returns null under any item', () => {
-    const cottageItems = itemsOf(placed('a', cottage, 1, 1))
-    const cottageOccupancy = buildOccupancy(cottageItems, catalog)
-    expect(
-      getLevelRange(1, 1, { cells: mapWith(), occupancy: cottageOccupancy, items: cottageItems }, catalog),
-    ).toBeNull()
-
-    const lampItems = itemsOf(placed('a', lamp, 0, 0))
-    const lampOccupancy = buildOccupancy(lampItems, catalog)
-    expect(
-      getLevelRange(0, 0, { cells: mapWith(), occupancy: lampOccupancy, items: lampItems }, catalog),
-    ).toBeNull()
-  })
-
-  it('throws when an occupancy uid has no matching item', () => {
-    const occupancy = new Map([[key(0, 0), 'ghost']])
-
-    expect(() =>
-      getLevelRange(0, 0, { cells: mapWith(), occupancy, items: itemsOf() }, catalog),
-    ).toThrow('Unknown item uid: ghost')
-  })
-
-  it('throws when the item id is missing from the catalog', () => {
-    const items = itemsOf(placed('a', cottage, 0, 0))
-    const occupancy = new Map([[key(0, 0), 'a']])
-
-    expect(() =>
-      getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, new Map()),
-    ).toThrow('Unknown item id: cottage')
-  })
-
-  it('looks up x,z and not z,x', () => {
-    const items = itemsOf(placed('a', lamp, 1, 2))
-    const occupancy = buildOccupancy(items, catalog)
-
-    expect(getLevelRange(1, 2, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
-    expect(getLevelRange(2, 1, { cells: mapWith(), occupancy, items }, catalog)).toEqual(
-      range,
-    )
-  })
-
-  it('treats an empty-string uid as an item', () => {
-    const items = itemsOf(placed('', lamp, 0, 0))
-    const occupancy = new Map([[key(0, 0), '']])
-
-    expect(getLevelRange(0, 0, { cells: mapWith(), occupancy, items }, catalog)).toBeNull()
-  })
-
-  it('ignores neighbouring heights', () => {
-    const cells = mapWith(
-      cell(0, 0, 'grass', 1),
-      cell(0, -1, 'grass', 1),
-      cell(1, 0, 'grass', 1),
-      cell(0, 1, 'grass', 1),
-      cell(-1, 0, 'grass', 1),
-    )
-
-    expect(getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog)).toEqual(
-      range,
-    )
-  })
-
-  it('is the full range for every tile type', () => {
-    for (const type of ['grass', 'land', 'water'] as const) {
-      const cells = mapWith(cell(0, 0, type, 1))
-      expect(
-        getLevelRange(0, 0, { cells, occupancy: new Map(), items: itemsOf() }, catalog),
-      ).toEqual(range)
-    }
   })
 })
 

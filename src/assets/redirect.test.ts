@@ -1,5 +1,4 @@
 import { describe, expect, it, vi } from 'vitest'
-import { redirectTarget } from './redirect'
 
 const pages = import.meta.glob('/public/404.html', {
   query: '?raw',
@@ -15,29 +14,19 @@ function run404(pathname: string, search: string, hash: string) {
   return replace
 }
 
-describe('redirectTarget', () => {
+describe('404 redirect', () => {
   it('keeps the query and hash under the project root', () => {
-    expect(redirectTarget('/evergrow/gallery', '?x=1', '#y')).toBe('/evergrow/?x=1#y')
-  })
-
-  it('returns the root for the root path', () => {
-    expect(redirectTarget('/')).toBe('/')
+    expect(run404('/evergrow/gallery', '?x=1', '#y')).toHaveBeenCalledWith(
+      '/evergrow/?x=1#y',
+    )
   })
 
   it('normalises a repo path without a trailing slash', () => {
-    expect(redirectTarget('/evergrow')).toBe('/evergrow/')
-    expect(redirectTarget('/evergrow/')).toBe('/evergrow/')
+    expect(run404('/evergrow', '', '')).toHaveBeenCalledWith('/evergrow/')
+    expect(run404('/evergrow/', '', '')).toHaveBeenCalledWith('/evergrow/')
   })
 
-  it('keeps public/404.html in sync with redirectTarget', () => {
-    const cases: Array<[string, string, string]> = [
-      ['/evergrow/gallery', '?x=1', '#y'],
-      ['/evergrow', '', ''],
-      ['/', '', ''],
-    ]
-    for (const [pathname, search, hash] of cases) {
-      const replace = run404(pathname, search, hash)
-      expect(replace).toHaveBeenCalledWith(redirectTarget(pathname, search, hash))
-    }
+  it('returns the root for the root path', () => {
+    expect(run404('/', '', '')).toHaveBeenCalledWith('/')
   })
 })
