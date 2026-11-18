@@ -24,6 +24,18 @@ stores, rendering or UI yet.
 - Each session prompt names its type (BUILD, FIX, DOCS or REVIEW). Review sessions report only and change no code or docs.
 - Dependabot PRs: batch them into one fix/ branch instead of merging each one.
 
+## UI build notes
+
+Handle these when the store and UI call the world commands:
+
+- **Keep `setLevel` out of drag strokes.** `validate` throws when `setLevel` targets a
+  cell under an item (D029), and `executeBatch` does not catch it, so one covered cell
+  aborts the whole stroke instead of being skipped. BRIEF §5.3 only makes paint and dig
+  up drag tools, and height uses a slider. Use `setLevelItem` for covered cells.
+- **Some commands record an undo step that changes nothing.** Digging an empty cell and
+  painting a tile its current type both succeed and add a history entry, so undo appears
+  to do nothing. This also applies to those commands inside a drag stroke. See D034.
+
 ## Log
 
 ### 2026-11-17
@@ -825,3 +837,10 @@ Verification:
   every production file was restored. `git diff` for `footprint.ts`, `catalog.ts`,
   `placement.ts` and `commands.ts` is empty.
 - The three behaviour-neutral history-cap mutations were excluded as instructed.
+
+### 2026-11-18 — docs: command edge cases for the UI build
+
+- Added UI build notes for keeping `setLevel` out of drag strokes and for no-op paint
+  and dig up commands creating an undo step.
+- Added D034 for the open question about no-op commands creating undo steps.
+- No code or tests changed. `npm test` (273), `npm run build` and `npm run lint` pass.
