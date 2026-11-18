@@ -7,13 +7,14 @@ import {
   canRedo,
   canUndo,
   execute,
+  executeBatch,
   redo,
   undo,
   validate,
   type Command,
   type WorldState,
 } from './commands'
-import { key } from './grid'
+import { key, worldBounds } from './grid'
 import {
   buildOccupancy,
   type PlacedItem,
@@ -90,6 +91,26 @@ const stateOf = (options: StateOptions = {}): WorldState => {
 }
 
 const inventoryOf = (entries: ReadonlyArray<[string, number]>) => new Map(entries)
+
+function worldCoords(count: number): Array<[number, number]> {
+  // Paint needs each cell buildable: start inside the start zone at (0, 0) and
+  // snake through z >= 0 so every next cell touches the already-painted path.
+  const { minX, maxX, maxZ } = worldBounds()
+  const coords: Array<[number, number]> = []
+  for (let z = 0; z <= maxZ && coords.length < count; z += 1) {
+    if (z === 0) {
+      for (let x = 0; x <= maxX && coords.length < count; x += 1) coords.push([x, z])
+    } else if (z % 2 === 1) {
+      for (let x = maxX; x >= minX && coords.length < count; x -= 1) coords.push([x, z])
+    } else {
+      for (let x = minX; x <= maxX && coords.length < count; x += 1) coords.push([x, z])
+    }
+  }
+  if (coords.length < count) {
+    throw new Error(`World has only ${coords.length} buildable-path cells; need ${count}`)
+  }
+  return coords
+}
 
 function assertConsistent(state: WorldState): void {
   expect(state.occupancy).toEqual(buildOccupancy(state.items, catalog))
@@ -813,6 +834,558 @@ describe('apply guards', () => {
     })
     expect(() => apply({ kind: 'setLevelItem', uid: 'a', level: 0 }, state, catalog)).toThrow(
       'Unexpected cell result: minStack',
+    )
+  })
+})
+
+describe('history limit', () => {
+  it('keeps the newest limit entries, drops the oldest, and undoes the kept ones', () => {
+    const limit = CONFIG.history.limit
+    const coords = worldCoords(limit + 1)
+
+    let state = stateOf()
+    let history = EMPTY_HISTORY
+    for (const [x, z] of coords) {
+      const result = execute(history, state, { kind: 'paint', x, z, type: 'grass' }, catalog)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      state = result.state
+      history = result.history
+      assertConsistent(state)
+    }
+
+    expect(history.past).toHaveLength(limit)
+    for (let count = 0; count < limit; count += 1) {
+      const undone = undo(history, state, catalog)
+      expect(undone.ok).toBe(true)
+      if (!undone.ok) return
+      state = undone.state
+      history = undone.history
+      assertConsistent(state)
+    }
+
+    expect(canUndo(history)).toBe(false)
+    expect(state.cells.size).toBe(1)
+    expect(state.cells.has(key(coords[0][0], coords[0][1]))).toBe(true)
+  })
+})
+
+describe('executeBatch', () => {
+  const paintCommands: Command[] = [
+    { kind: 'paint', x: 0, z: 0, type: 'grass' },
+    { kind: 'paint', x: 1, z: 0, type: 'grass' },
+    { kind: 'paint', x: 0, z: 1, type: 'grass' },
+  ]
+
+  it('applies a stroke as one history entry and round-trips', () => {
+    const initial = stateOf()
+    const result = executeBatch(EMPTY_HISTORY, initial, paintCommands, catalog)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.skipped).toEqual([])
+    expect(result.history.past).toHaveLength(1)
+    expect(result.state.cells.size).toBe(3)
+    assertConsistent(result.state)
+
+    const undone = undo(result.history, result.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+    assertConsistent(undone.state)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(result.state)
+    assertConsistent(redone.state)
+  })
+
+  it('skips a failing cell and records only the applied commands', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(0, 0)),
+      items: itemsOf(placed('a', lamp)),
+    })
+    const commands: Command[] = [
+      { kind: 'paint', x: 2, z: 2, type: 'grass' },
+      { kind: 'digUp', x: 0, z: 0 },
+      { kind: 'paint', x: 3, z: 3, type: 'grass' },
+    ]
+    const result = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.skipped).toEqual([{ index: 1, reason: 'underItem' }])
+    expect(result.history.past).toHaveLength(1)
+    expect(result.state.cells.has(key(2, 2))).toBe(true)
+    expect(result.state.cells.has(key(3, 3))).toBe(true)
+    expect(result.state.cells.get(key(0, 0))?.level).toBe(1)
+    assertConsistent(result.state)
+
+    const undone = undo(result.history, result.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(result.state)
+  })
+
+  it('fails with the first reason when every sub-command fails', () => {
+    const state = stateOf({
+      cells: mapWith(cell(0, 0)),
+      items: itemsOf(placed('a', lamp)),
+    })
+    const commands: Command[] = [
+      { kind: 'digUp', x: 0, z: 0 },
+      { kind: 'paint', x: 0, z: 0, type: 'water' },
+    ]
+    expect(executeBatch(EMPTY_HISTORY, state, commands, catalog)).toEqual({
+      ok: false,
+      reason: 'underItem',
+      state,
+      history: EMPTY_HISTORY,
+      skipped: [
+        { index: 0, reason: 'underItem' },
+        { index: 1, reason: 'wrongTile' },
+      ],
+    })
+  })
+
+  it('re-validates every sub-command on redo and changes nothing on failure', () => {
+    const initial = stateOf()
+    const commands: Command[] = [
+      { kind: 'paint', x: 0, z: 0, type: 'water' },
+      { kind: 'paint', x: 1, z: 1, type: 'water' },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+
+    const changed = stateOf({
+      cells: mapWith(cell(1, 1)),
+      items: itemsOf(placed('a', lamp, 1, 1)),
+    })
+    expect(redo(undone.history, changed, catalog)).toEqual({
+      ok: false,
+      reason: 'wrongTile',
+      state: changed,
+      history: undone.history,
+    })
+  })
+
+  it('sums inventory deltas across a batch', () => {
+    const initial = stateOf({ inventory: inventoryOf([['lamp', 2]]) })
+    const commands: Command[] = [
+      {
+        kind: 'place',
+        uid: 'a',
+        id: 'lamp',
+        x: 0,
+        z: 0,
+        rot: 0,
+        autoTile: 'grass',
+        source: 'inventory',
+      },
+      {
+        kind: 'place',
+        uid: 'b',
+        id: 'lamp',
+        x: 2,
+        z: 2,
+        rot: 1,
+        autoTile: 'grass',
+        source: 'inventory',
+      },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.state.inventory.has('lamp')).toBe(false)
+    expect(executed.state.items.size).toBe(2)
+    assertConsistent(executed.state)
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+    expect(undone.state.inventory.get('lamp')).toBe(2)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(executed.state)
+  })
+
+  it('caps past at the limit and keeps the newest batch entry', () => {
+    const limit = CONFIG.history.limit
+    const coords = worldCoords(limit + 1)
+    let state = stateOf()
+    let history = EMPTY_HISTORY
+    for (let index = 0; index < limit; index += 1) {
+      const [x, z] = coords[index]
+      const result = execute(history, state, { kind: 'paint', x, z, type: 'grass' }, catalog)
+      expect(result.ok).toBe(true)
+      if (!result.ok) return
+      state = result.state
+      history = result.history
+    }
+
+    const [batchX, batchZ] = coords[limit]
+    const result = executeBatch(
+      history,
+      state,
+      [{ kind: 'paint', x: batchX, z: batchZ, type: 'grass' }],
+      catalog,
+    )
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    expect(result.history.past).toHaveLength(limit)
+    expect(result.history.future).toEqual([])
+    expect(result.history.past[result.history.past.length - 1].command).toMatchObject({
+      kind: 'batch',
+    })
+    expect(result.history.past[0].command).toEqual({
+      kind: 'paint',
+      x: coords[1][0],
+      z: coords[1][1],
+      type: 'grass',
+    })
+  })
+
+  it('sums coin deltas from sells and round-trips', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(0, 0), cell(1, 1)),
+      items: itemsOf(placed('a', lamp), placed('b', lamp, 1, 1)),
+      coins: 5,
+    })
+    const commands: Command[] = [
+      { kind: 'sell', uid: 'a' },
+      { kind: 'sell', uid: 'b' },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.state.coins).toBe(initial.coins + 2 * lamp.price)
+    expect(executed.history.past).toHaveLength(1)
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(executed.state)
+
+    const undoneAgain = undo(redone.history, redone.state, catalog)
+    expect(undoneAgain.ok).toBe(true)
+    if (!undoneAgain.ok) return
+    expect(undoneAgain.state).toEqual(initial)
+  })
+
+  it('blocks undo of a batch of sells when the coins were spent', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(0, 0), cell(1, 1)),
+      items: itemsOf(placed('a', lamp), placed('b', lamp, 1, 1)),
+      coins: 5,
+    })
+    const executed = executeBatch(
+      EMPTY_HISTORY,
+      initial,
+      [
+        { kind: 'sell', uid: 'a' },
+        { kind: 'sell', uid: 'b' },
+      ],
+      catalog,
+    )
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+
+    const spent = stateOf({
+      cells: executed.state.cells,
+      items: executed.state.items,
+      inventory: executed.state.inventory,
+      coins: 0,
+    })
+    expect(undo(executed.history, spent, catalog)).toEqual({
+      ok: false,
+      reason: 'unaffordable',
+      state: spent,
+      history: executed.history,
+    })
+  })
+
+  it('clears future on a successful stroke and keeps it on an all-fail stroke', () => {
+    const executed = execute(EMPTY_HISTORY, stateOf(), { kind: 'paint', x: 0, z: 0, type: 'grass' }, catalog)
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(canRedo(undone.history)).toBe(true)
+
+    const allFail = executeBatch(
+      undone.history,
+      undone.state,
+      [{ kind: 'digUp', x: HALF_WORLD, z: 0 }],
+      catalog,
+    )
+    expect(allFail.ok).toBe(false)
+    expect(allFail.history).toEqual(undone.history)
+    expect(canRedo(allFail.history)).toBe(true)
+
+    const stroke = executeBatch(
+      undone.history,
+      undone.state,
+      paintCommands,
+      catalog,
+    )
+    expect(stroke.ok).toBe(true)
+    if (!stroke.ok) return
+    expect(canRedo(stroke.history)).toBe(false)
+  })
+
+  it('applies dependent paint, sell and place commands in one stroke', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(1, 1)),
+      items: itemsOf(placed('a', lamp, 1, 1)),
+      coins: 0,
+    })
+    const commands: Command[] = [
+      { kind: 'paint', x: 2, z: 2, type: 'grass' },
+      { kind: 'sell', uid: 'a' },
+      {
+        kind: 'place',
+        uid: 'f',
+        id: 'fence',
+        x: 2,
+        z: 2,
+        rot: 0,
+        autoTile: 'grass',
+        source: 'shop',
+      },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.history.past).toHaveLength(1)
+    expect(executed.state.items.has('f')).toBe(true)
+    expect(executed.state.items.has('a')).toBe(false)
+    expect(executed.state.cells.get(key(2, 2))?.type).toBe('grass')
+    assertConsistent(executed.state)
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(executed.state)
+  })
+
+  it('applies both paints when the same cell is painted twice', () => {
+    const executed = executeBatch(
+      EMPTY_HISTORY,
+      stateOf(),
+      [
+        { kind: 'paint', x: 0, z: 0, type: 'grass' },
+        { kind: 'paint', x: 0, z: 0, type: 'water' },
+      ],
+      catalog,
+    )
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.skipped).toEqual([])
+    expect(executed.state.cells.get(key(0, 0))?.type).toBe('water')
+  })
+
+  it('never retries a skipped command that a later command would enable', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(1, 1)),
+      items: itemsOf(placed('a', lamp, 1, 1)),
+      coins: 0,
+    })
+    const commands: Command[] = [
+      {
+        kind: 'place',
+        uid: 'f',
+        id: 'fence',
+        x: 0,
+        z: 0,
+        rot: 0,
+        autoTile: 'grass',
+        source: 'shop',
+      },
+      { kind: 'sell', uid: 'a' },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.skipped).toEqual([{ index: 0, reason: 'unaffordable' }])
+    expect(executed.state.items.has('f')).toBe(false)
+    expect(executed.state.coins).toBe(initial.coins + lamp.price)
+  })
+
+  it('keeps inventory exact after placing and storing the same uid', () => {
+    const initial = stateOf({ inventory: inventoryOf([['lamp', 1]]) })
+    const commands: Command[] = [
+      {
+        kind: 'place',
+        uid: 'a',
+        id: 'lamp',
+        x: 0,
+        z: 0,
+        rot: 0,
+        autoTile: 'grass',
+        source: 'inventory',
+      },
+      { kind: 'store', uid: 'a' },
+    ]
+    const executed = executeBatch(EMPTY_HISTORY, initial, commands, catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.state.inventory.get('lamp')).toBe(1)
+    expect([...executed.state.inventory.values()].every((count) => count > 0)).toBe(true)
+    expect(executed.state.items.size).toBe(0)
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+  })
+
+  it('applies a sell refund as a delta after outside coin changes', () => {
+    const initial = stateOf({
+      cells: mapWith(cell(0, 0), cell(1, 1)),
+      items: itemsOf(placed('a', lamp), placed('b', lamp, 1, 1)),
+      coins: 5,
+    })
+    const executed = executeBatch(
+      EMPTY_HISTORY,
+      initial,
+      [
+        { kind: 'sell', uid: 'a' },
+        { kind: 'sell', uid: 'b' },
+      ],
+      catalog,
+    )
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.state.coins).toBe(initial.coins + 2 * lamp.price)
+
+    const external = stateOf({
+      cells: executed.state.cells,
+      items: executed.state.items,
+      inventory: executed.state.inventory,
+      coins: 100,
+    })
+    const undone = undo(executed.history, external, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state.coins).toBe(external.coins - 2 * lamp.price)
+  })
+
+  it('throws for a duplicate uid inside a batch', () => {
+    const initial = stateOf({ coins: lamp.price * 3 })
+    const command = (x: number): Command => ({
+      kind: 'place',
+      uid: 'a',
+      id: 'lamp',
+      x,
+      z: 0,
+      rot: 0,
+      autoTile: 'grass',
+      source: 'shop',
+    })
+    expect(() =>
+      executeBatch(EMPTY_HISTORY, initial, [command(0), command(1)], catalog),
+    ).toThrow('Item uid already exists: a')
+  })
+
+  it('skips a second place on an occupied cell', () => {
+    const initial = stateOf({ coins: lamp.price * 3 })
+    const command = (uid: string): Command => ({
+      kind: 'place',
+      uid,
+      id: 'lamp',
+      x: 0,
+      z: 0,
+      rot: 0,
+      autoTile: 'grass',
+      source: 'shop',
+    })
+    const executed = executeBatch(EMPTY_HISTORY, initial, [command('a'), command('b')], catalog)
+
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.skipped).toEqual([{ index: 1, reason: 'occupied' }])
+    expect(executed.history.past).toHaveLength(1)
+    expect(executed.state.items.size).toBe(1)
+  })
+
+  it('round-trips a single-command batch', () => {
+    const initial = stateOf()
+    const executed = executeBatch(
+      EMPTY_HISTORY,
+      initial,
+      [{ kind: 'paint', x: 0, z: 0, type: 'grass' }],
+      catalog,
+    )
+    expect(executed.ok).toBe(true)
+    if (!executed.ok) return
+    expect(executed.history.past).toHaveLength(1)
+
+    const undone = undo(executed.history, executed.state, catalog)
+    expect(undone.ok).toBe(true)
+    if (!undone.ok) return
+    expect(undone.state).toEqual(initial)
+
+    const redone = redo(undone.history, undone.state, catalog)
+    expect(redone.ok).toBe(true)
+    if (!redone.ok) return
+    expect(redone.state).toEqual(executed.state)
+  })
+
+  it('throws for nested and empty batches', () => {
+    const state = stateOf()
+    expect(() =>
+      executeBatch(
+        EMPTY_HISTORY,
+        state,
+        [{ kind: 'batch', commands: [{ kind: 'paint', x: 0, z: 0, type: 'grass' }] }],
+        catalog,
+      ),
+    ).toThrow('Nested batches are not allowed')
+    expect(() => executeBatch(EMPTY_HISTORY, state, [], catalog)).toThrow(
+      'An empty batch is not allowed',
+    )
+  })
+
+  it('throws when a batch reaches execute or apply directly', () => {
+    const state = stateOf()
+    const batch: Command = { kind: 'batch', commands: [] }
+    expect(() => execute(EMPTY_HISTORY, state, batch, catalog)).toThrow(
+      'Batch commands must be executed with executeBatch',
+    )
+    expect(() => apply(batch, state, catalog)).toThrow(
+      'Batch commands must be executed with executeBatch',
     )
   })
 })

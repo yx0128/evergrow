@@ -16,6 +16,7 @@ import {
   canRedo,
   canUndo,
   execute,
+  executeBatch,
   redo,
   undo,
   validate,
@@ -125,6 +126,25 @@ function historyFixture() {
 
 function redoFixture() {
   const fixture = historyFixture()
+  const undone = undo(fixture.history, fixture.state, fixture.catalog)
+  if (!undone.ok) throw new Error(undone.reason)
+  return { history: undone.history, state: undone.state, catalog: fixture.catalog }
+}
+
+const stroke: Command[] = [
+  { kind: 'paint', x: 2, z: 2, type: 'grass' },
+  { kind: 'paint', x: 2, z: 3, type: 'grass' },
+]
+
+function batchFixture() {
+  const world = worldOf()
+  const executed = executeBatch(EMPTY_HISTORY, world.state, stroke, world.catalog)
+  if (!executed.ok) throw new Error(executed.reason)
+  return { history: executed.history, state: executed.state, catalog: world.catalog }
+}
+
+function batchUndoFixture() {
+  const fixture = batchFixture()
   const undone = undo(fixture.history, fixture.state, fixture.catalog)
   if (!undone.ok) throw new Error(undone.reason)
   return { history: undone.history, state: undone.state, catalog: fixture.catalog }
@@ -284,5 +304,20 @@ describe('logic purity', () => {
   it('canUndo and canRedo do not mutate the history', () => {
     expectDeepPure(historyFixture, (value) => canUndo(value.history))
     expectDeepPure(redoFixture, (value) => canRedo(value.history))
+  })
+
+  it('executeBatch does not mutate the history, state or catalog', () => {
+    expectDeepPure(() => ({ ...worldOf(), history: EMPTY_HISTORY }), (value) =>
+      executeBatch(value.history, value.state, stroke, value.catalog),
+    )
+  })
+
+  it('undo and redo of a batch do not mutate the history, state or catalog', () => {
+    expectDeepPure(batchFixture, (value) =>
+      undo(value.history, value.state, value.catalog),
+    )
+    expectDeepPure(batchUndoFixture, (value) =>
+      redo(value.history, value.state, value.catalog),
+    )
   })
 })

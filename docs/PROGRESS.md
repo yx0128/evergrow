@@ -199,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 187 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
+npm test         # 210 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -310,13 +310,24 @@ Pure modules, no React/Three/DOM imports. They import `CONFIG` only.
 - `apply(command, state, catalog)` returns `{ state, inverse }`. Cells and items are
   restored exactly by the inverse; coins and inventory change by deltas (D030).
   `place` and `move` create their auto tiles through `validatePlacement`, and `place`
-  undo removes only the tiles it created.
+  undo removes only the tiles it created. A uid already in `items` throws, including
+  inside a batch: callers supply uids (D031), so a duplicate is a caller bug.
 - `History { past, future }` is immutable. `execute` validates, applies, pushes onto
   `past` and clears `future`; failures leave both unchanged. `undo` and `redo`
   re-validate first and return the failure reason unchanged (D030).
   `canUndo` / `canRedo` inspect the stacks.
+- `execute` and `redo` keep at most `CONFIG.history.limit` past entries, dropping the
+  oldest (D032). `future` only receives entries from `past`, so it cannot exceed the
+  limit.
+- `executeBatch(history, state, commands, catalog)` runs one drag stroke as one
+  history entry. Sub-commands run in order and are skipped on failure; the result
+  reports `{ index, reason }` in `skipped`. Only applied commands are recorded, and
+  the batch inverse restores the pre-batch cells/items and sums the coin and
+  inventory deltas. If nothing applies it returns the first reason unchanged.
+  Nested or empty batches throw. Batch redo re-validates every sub-command and is
+  all-or-nothing, validating and applying each sub-command once. `validate`, `apply`
+  and `execute` throw if given a `batch`; batches must go through `executeBatch`.
 - Callers supply uids; there is no randomness or clock in `src/logic` (D031).
-  History is unbounded (D032).
 - `place` from inventory spends one item (`notInInventory`) or from the shop spends
   `price` (`unaffordable`) and goes straight into the world. `store` adds one item;
   `sell` refunds the full price (D013). `rotate` increments `rot` for any existing
@@ -627,3 +638,71 @@ Verification:
   chunk-size warning only).
 - `npm run coverage`: `src/logic` is 100% statements, branches, functions and lines;
   no coverage exclusions.
+
+### 2026-11-18 — fix: undo history limit and grouped drag strokes
+
+Done:
+
+- Added `CONFIG.history.limit` (50) and a config test that it is an integer ≥ 1.
+- `execute`, `executeBatch` and `redo` cap `past` at the configured limit by
+  dropping the oldest entry (D032).
+- Added the `batch` command and `executeBatch`. One drag stroke is one undo step;
+  failing sub-commands are skipped and reported by index and reason, and only
+  applied commands are recorded. The inverse restores the pre-batch state and sums
+  coin and inventory deltas. Redo re-validates every sub-command and is
+  all-or-nothing.
+- Added tests for the limit, batch apply/undo/redo, skipped and all-failed batches,
+  all-or-nothing redo, nested/empty batch throws, summed deltas and purity.
+
+Verification:
+
+- `npm test` 187 → 198 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` is 100% statements, branches, functions and lines;
+  no coverage exclusions.
+
+### 2026-11-18 — fix: undo history test gaps and single-pass batch
+
+Done:
+
+- `executeBatch` now validates and applies each sub-command once, collecting the
+  summed coin and inventory deltas in the same loop. The inverse still snapshots the
+  pre-batch cells and items, and the delta code is shared with the redo path.
+- Reworked the limit test to generate distinct buildable coordinates from
+  `CONFIG.world` bounds and to fail clearly when the world cannot supply enough.
+- Added batch tests for capping at the limit, summed coin deltas, blocked batch undo,
+  future clearing, dependent sub-commands, same-cell paints, order-sensitive skips,
+  place-then-store inventory, external coin deltas, duplicate uids and single-command
+  batches.
+- The skip test now covers undo and redo of the applied commands.
+- Documented the `batch` guard on `validate`, `apply` and `execute`.
+
+Verification:
+
+- `npm test` 198 → 209 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines; no coverage exclusions. Each new targeted test was checked against a
+  temporary code break and failed as expected before restore.
+
+### 2026-11-18 — fix: duplicate uid throws and single-pass batch redo
+
+Done:
+
+- Restored the duplicate-uid check to run before `validatePlacement`, so a duplicate
+  uid throws again, including inside `executeBatch` (D031). Placement occupancy
+  reasons are unaffected for distinct uids.
+- Batch redo now validates and applies each sub-command once, accumulating deltas
+  with the shared helpers. `validateAll` and `applyAll` were removed. Redo remains
+  all-or-nothing and its inverse snapshots the pre-redo cells and items.
+- Replaced the duplicate-uid skip test with a throw test and added an occupied-cell
+  skip test. Removed literal coin expectations from the new batch tests and explained
+  the `worldCoords` path.
+- Added an undo-after-redo assertion so the batch-redo inverse is covered.
+
+Verification:
+
+- `npm test` 209 → 210 tests, `npm run build` and `npm run lint` pass (existing
+  chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines; no coverage exclusions.

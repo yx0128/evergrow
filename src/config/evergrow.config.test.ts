@@ -59,6 +59,11 @@ describe('evergrow config', () => {
     expect(camera.snapRotateDeg).toBe(90)
   })
 
+  it('has a positive integer undo history limit', () => {
+    expect(Number.isInteger(config.history.limit)).toBe(true)
+    expect(config.history.limit).toBeGreaterThanOrEqual(1)
+  })
+
   it('has sane motion timings', () => {
     const { motion } = config
     expect(motion.dropFadeMs).toBeGreaterThanOrEqual(0)

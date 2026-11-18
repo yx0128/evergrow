@@ -1,8 +1,9 @@
-import type {
-  InvalidReason,
-  ItemDef,
-  Rotation,
-  TileType,
+import {
+  CONFIG,
+  type InvalidReason,
+  type ItemDef,
+  type Rotation,
+  type TileType,
 } from '../config/evergrow.config'
 import { itemDefinition } from './catalog'
 import {
@@ -60,6 +61,7 @@ export type Command =
   | { readonly kind: 'setLevel'; readonly x: number; readonly z: number; readonly level: number }
   | { readonly kind: 'setLevelItem'; readonly uid: string; readonly level: number }
   | { readonly kind: 'digUp'; readonly x: number; readonly z: number }
+  | { readonly kind: 'batch'; readonly commands: readonly Command[] }
 
 interface InventoryDelta {
   readonly id: string
@@ -82,6 +84,26 @@ export interface ApplyResult {
   readonly state: WorldState
   readonly inverse: Inverse
 }
+
+export interface BatchSkip {
+  readonly index: number
+  readonly reason: InvalidReason
+}
+
+export type BatchResult =
+  | {
+      readonly ok: true
+      readonly state: WorldState
+      readonly history: History
+      readonly skipped: readonly BatchSkip[]
+    }
+  | {
+      readonly ok: false
+      readonly reason: InvalidReason
+      readonly state: WorldState
+      readonly history: History
+      readonly skipped: readonly BatchSkip[]
+    }
 
 export type OperationResult =
   | { readonly ok: true; readonly state: WorldState; readonly history: History }
@@ -289,6 +311,8 @@ export function validate(
       if (uid !== undefined) return invalid('underItem')
       return valid()
     }
+    case 'batch':
+      throw new Error('Batch commands must be executed with executeBatch')
   }
 }
 
@@ -425,6 +449,8 @@ export function apply(
         inverse: inverseOf(state, 0, []),
       }
     }
+    case 'batch':
+      throw new Error('Batch commands must be executed with executeBatch')
   }
 }
 
@@ -450,6 +476,40 @@ function applyInverse(
   }
 }
 
+function appendPast(
+  history: History,
+  entry: HistoryEntry,
+): readonly HistoryEntry[] {
+  const past = [...history.past, entry]
+  const limit = CONFIG.history.limit
+  return past.length > limit ? past.slice(past.length - limit) : past
+}
+
+interface DeltaSum {
+  coinsDelta: number
+  readonly inventoryDeltas: Map<string, number>
+}
+
+function emptyDeltaSum(): DeltaSum {
+  return { coinsDelta: 0, inventoryDeltas: new Map() }
+}
+
+function addInverseDeltas(sum: DeltaSum, inverse: Inverse): void {
+  sum.coinsDelta += inverse.coinsDelta
+  for (const { id, delta } of inverse.inventoryDeltas) {
+    sum.inventoryDeltas.set(id, (sum.inventoryDeltas.get(id) ?? 0) + delta)
+  }
+}
+
+function inverseWithDeltas(state: WorldState, sum: DeltaSum): Inverse {
+  return {
+    cells: state.cells,
+    items: state.items,
+    coinsDelta: sum.coinsDelta,
+    inventoryDeltas: [...sum.inventoryDeltas].map(([id, delta]) => ({ id, delta })),
+  }
+}
+
 /** Validate, apply, record on `past`, and clear `future`; failures change nothing. */
 export function execute(
   history: History,
@@ -465,9 +525,63 @@ export function execute(
     ok: true,
     state: applied.state,
     history: {
-      past: [...history.past, { command, inverse: applied.inverse }],
+      past: appendPast(history, { command, inverse: applied.inverse }),
       future: [],
     },
+  }
+}
+
+/**
+ * Run drag-stroke sub-commands in order, skipping failures. One history entry
+ * records only the applied commands; its inverse restores the pre-batch state.
+ */
+export function executeBatch(
+  history: History,
+  state: WorldState,
+  commands: readonly Command[],
+  catalog: ReadonlyMap<string, ItemDef>,
+): BatchResult {
+  if (commands.length === 0) throw new Error('An empty batch is not allowed')
+  for (const command of commands) {
+    if (command.kind === 'batch') throw new Error('Nested batches are not allowed')
+  }
+
+  const applied: Command[] = []
+  const skipped: BatchSkip[] = []
+  const sum = emptyDeltaSum()
+  let working = state
+  for (let index = 0; index < commands.length; index += 1) {
+    const command = commands[index]
+    const result = validate(command, working, catalog)
+    if (!result.ok) {
+      skipped.push({ index, reason: result.reason })
+      continue
+    }
+    const single = apply(command, working, catalog)
+    working = single.state
+    applied.push(command)
+    addInverseDeltas(sum, single.inverse)
+  }
+
+  if (applied.length === 0) {
+    return {
+      ok: false,
+      reason: skipped[0].reason,
+      state,
+      history,
+      skipped,
+    }
+  }
+
+  const batch: Command = { kind: 'batch', commands: applied }
+  return {
+    ok: true,
+    state: working,
+    history: {
+      past: appendPast(history, { command: batch, inverse: inverseWithDeltas(state, sum) }),
+      future: [],
+    },
+    skipped,
   }
 }
 
@@ -502,6 +616,29 @@ export function redo(
   const entry = history.future[history.future.length - 1]
   if (!entry) throw new Error('Nothing to redo')
 
+  if (entry.command.kind === 'batch') {
+    let working = state
+    const sum = emptyDeltaSum()
+    for (const command of entry.command.commands) {
+      const result = validate(command, working, catalog)
+      if (!result.ok) return { ok: false, reason: result.reason, state, history }
+      const single = apply(command, working, catalog)
+      working = single.state
+      addInverseDeltas(sum, single.inverse)
+    }
+    return {
+      ok: true,
+      state: working,
+      history: {
+        past: appendPast(history, {
+          command: entry.command,
+          inverse: inverseWithDeltas(state, sum),
+        }),
+        future: history.future.slice(0, -1),
+      },
+    }
+  }
+
   const result = validate(entry.command, state, catalog)
   if (!result.ok) return { ok: false, reason: result.reason, state, history }
 
@@ -510,7 +647,10 @@ export function redo(
     ok: true,
     state: applied.state,
     history: {
-      past: [...history.past, { command: entry.command, inverse: applied.inverse }],
+      past: appendPast(history, {
+        command: entry.command,
+        inverse: applied.inverse,
+      }),
       future: history.future.slice(0, -1),
     },
   }

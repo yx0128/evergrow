@@ -61,6 +61,10 @@ export interface CameraConfig {
   readonly zoomSpeed: number
 }
 
+export interface HistoryConfig {
+  readonly limit: number
+}
+
 export interface MotionConfig {
   readonly dropFadeMs: number
   readonly digUpFadeMs: number
@@ -173,6 +177,7 @@ export interface EvergrowConfig {
   readonly world: WorldConfig
   readonly camera: CameraConfig
   readonly motion: MotionConfig
+  readonly history: HistoryConfig
   readonly dayNight: DayNightConfig
   readonly rendering: RenderingConfig
   readonly variation: VariationConfig
@@ -245,6 +250,10 @@ export const CONFIG: EvergrowConfig = {
     panSpeed: 12,
     rotateSpeed: 90,
     zoomSpeed: 0.0015,
+  },
+
+  history: {
+    limit: 50,
   },
 
   motion: {
