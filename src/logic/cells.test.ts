@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { CONFIG, type InvalidReason, type ItemDef } from '../config/evergrow.config'
+import {
+  CONFIG,
+  type InvalidReason,
+  type ItemDef,
+  type TileType,
+} from '../config/evergrow.config'
 import {
   digUp,
   getCell,
@@ -12,7 +17,7 @@ import {
   setType,
 } from './cells'
 import type { Cell, CellMap, CellResult } from './cells'
-import { key } from './grid'
+import { DIRECTIONS, key } from './grid'
 import { buildOccupancy, type PlacedItem, type PlacedItems } from './placement'
 
 const HALF_WORLD = CONFIG.world.maxSize / 2
@@ -183,6 +188,14 @@ describe('setLevel', () => {
 
     expect(result.ok).toBe(true)
     expect(expectOk(result)).toBe(cells)
+  })
+
+  it('on an empty cell ignores every invalid level', () => {
+    const cells = mapWith()
+
+    for (const level of [0, MAX + 1, NaN, 2.5, Infinity, -Infinity]) {
+      expect(expectOk(setLevel(cells, 9, 9, level))).toBe(cells)
+    }
   })
 })
 
@@ -495,5 +508,35 @@ describe('no water or neighbour rules (D014)', () => {
     const cells = mapWith(cell(1, 1, 'water', 1))
 
     expect(expectOk(digUp(cells, 1, 1)).size).toBe(0)
+  })
+
+  it('tile edits ignore every neighbour type, direction and height', () => {
+    const types: TileType[] = ['grass', 'land', 'water']
+    const heights = [MIN_LEVEL, MAX]
+
+    for (const type of types) {
+      for (const neighbourType of types) {
+        for (const direction of Object.values(DIRECTIONS)) {
+          for (const height of heights) {
+            for (const neighbourHeight of heights) {
+              const near = cell(direction.x, direction.z, neighbourType, neighbourHeight)
+              const both = mapWith(cell(0, 0, type, height), near)
+
+              expect(getCell(expectOk(setCell(mapWith(near), cell(0, 0, type, height))), 0, 0)?.level).toBe(height)
+              for (const target of heights) {
+                expect(getCell(expectOk(setLevel(both, 0, 0, target)), 0, 0)?.level).toBe(target)
+              }
+              expect(getCell(expectOk(paint(mapWith(near), 0, 0, type)), 0, 0)).toEqual(
+                cell(0, 0, type, MIN_LEVEL),
+              )
+              expectOk(digUp(both, 0, 0))
+              expect(
+                getLevelRange(0, 0, { cells: both, occupancy: new Map(), items: new Map() }, new Map()),
+              ).toEqual({ min: MIN_LEVEL, max: MAX })
+            }
+          }
+        }
+      }
+    }
   })
 })

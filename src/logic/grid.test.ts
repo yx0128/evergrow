@@ -189,6 +189,12 @@ describe('isBuildable', () => {
     expect(isBuildable(26, 20, typedTile(20, 20, 'water'))).toBe(true)
   })
 
+  it('every tile type extends the buildable ring', () => {
+    for (const type of ['grass', 'land', 'water'] as const) {
+      expect(isBuildable(26, 20, typedTile(20, 20, type))).toBe(true)
+    }
+  })
+
   it('rejects cells outside the world cap even when within the ring', () => {
     const edge = tile(HALF_WORLD - 3, 0)
     expect(isBuildable(HALF_WORLD, 0, edge)).toBe(false)

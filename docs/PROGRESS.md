@@ -199,7 +199,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 245 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
+npm test         # 248 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -736,3 +736,27 @@ Verification:
 - Each of the 35 new tests was checked against its named temporary bug (37 bug runs
   including two each for tests 7 and 23); every targeted test failed as expected, and
   `git diff` for `src/logic/grid.ts` and `src/logic/cells.ts` is empty afterwards.
+
+### 2026-11-18 — fix: D014 test matrix for neighbours and tile types
+
+Done:
+
+- Added a table-driven `cells.test.ts` test covering every combination of tile type,
+  orthogonal neighbour type, direction and level for `setCell`, `setLevel`, `paint`,
+  `digUp` and `getLevelRange` (D014).
+- Added `grid.test.ts` coverage that grass, land and water all extend the buildable
+  ring, and a `setLevel` test that every invalid level is ignored on an empty cell.
+- Production code is unchanged.
+
+Why: review found the remaining D014 gaps only covered some tile and neighbour
+combinations.
+
+Verification:
+
+- `npm test` 245 → 248 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines. Overall branches are 99.59%; only `src/assets/redirect.ts` line 3 is
+  uncovered.
+- All 12 named temporary bugs made the targeted test fail; each was applied and
+  restored on its own. `git diff main -- src/logic/grid.ts src/logic/cells.ts` is empty.
