@@ -760,3 +760,26 @@ Verification:
   uncovered.
 - All 12 named temporary bugs made the targeted test fail; each was applied and
   restored on its own. `git diff main -- src/logic/grid.ts src/logic/cells.ts` is empty.
+
+### 2026-11-18 — fix: check the level left after digging beside neighbours
+
+Done:
+
+- Strengthened the `digUp` assertion in the D014 neighbour matrix test: it now checks
+  the resulting level is `height - 1`, or that the cell is gone at `MIN_LEVEL`,
+  instead of only checking that `digUp` succeeds.
+- Production code is unchanged.
+
+Why: the previous assertion still passed when a raised column beside water was deleted
+outright.
+
+Verification:
+
+- `npm test` remains 248 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage`: `src/logic` stays at 100% statements, branches, functions and
+  lines. Overall branches are 99.59%; only `src/assets/redirect.ts` line 3 is
+  uncovered.
+- The named temporary bug (deleting a raised column beside water) made the strengthened
+  test fail as expected, then the code was restored. `git diff main -- src/logic/cells.ts`
+  is empty.

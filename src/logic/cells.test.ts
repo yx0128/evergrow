@@ -529,7 +529,7 @@ describe('no water or neighbour rules (D014)', () => {
               expect(getCell(expectOk(paint(mapWith(near), 0, 0, type)), 0, 0)).toEqual(
                 cell(0, 0, type, MIN_LEVEL),
               )
-              expectOk(digUp(both, 0, 0))
+              expect(getCell(expectOk(digUp(both, 0, 0)), 0, 0)?.level).toBe(height === MIN_LEVEL ? undefined : height - 1)
               expect(
                 getLevelRange(0, 0, { cells: both, occupancy: new Map(), items: new Map() }, new Map()),
               ).toEqual({ min: MIN_LEVEL, max: MAX })
