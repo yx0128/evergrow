@@ -23,10 +23,14 @@ export type WorldCommandInput =
   | Exclude<Command, { readonly kind: 'place' }>
   | (Omit<PlaceCommand, 'uid'> & { readonly uid?: string })
 
+/** Where the latest successful world change came from; fades use it to skip undo and redo (§9). */
+export type ChangeSource = 'none' | 'execute' | 'batch' | 'undo' | 'redo'
+
 export interface WorldStoreState extends WorldState {
   readonly history: History
   readonly canUndo: boolean
   readonly canRedo: boolean
+  readonly changeSource: ChangeSource
 }
 
 export interface WorldStoreActions {
@@ -98,11 +102,14 @@ export function createWorldStore(
   return create<WorldStore>()((set, get) => ({
     ...initial,
     ...historyState(EMPTY_HISTORY),
+    changeSource: 'none',
 
     execute(command) {
       const state = get()
       const result = runCommand(state.history, worldOf(state), withUid(command), catalog)
-      if (result.ok) set({ ...result.state, ...historyState(result.history) })
+      if (result.ok) {
+        set({ ...result.state, ...historyState(result.history), changeSource: 'execute' })
+      }
       return result
     },
 
@@ -114,7 +121,9 @@ export function createWorldStore(
         commands.map(withUid),
         catalog,
       )
-      if (result.ok) set({ ...result.state, ...historyState(result.history) })
+      if (result.ok) {
+        set({ ...result.state, ...historyState(result.history), changeSource: 'batch' })
+      }
       return result
     },
 
@@ -122,7 +131,9 @@ export function createWorldStore(
       const state = get()
       if (!state.canUndo) return undefined
       const result = runUndo(state.history, worldOf(state), catalog)
-      if (result.ok) set({ ...result.state, ...historyState(result.history) })
+      if (result.ok) {
+        set({ ...result.state, ...historyState(result.history), changeSource: 'undo' })
+      }
       return result
     },
 
@@ -130,7 +141,9 @@ export function createWorldStore(
       const state = get()
       if (!state.canRedo) return undefined
       const result = runRedo(state.history, worldOf(state), catalog)
-      if (result.ok) set({ ...result.state, ...historyState(result.history) })
+      if (result.ok) {
+        set({ ...result.state, ...historyState(result.history), changeSource: 'redo' })
+      }
       return result
     },
 

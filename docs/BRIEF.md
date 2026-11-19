@@ -436,6 +436,8 @@ All tunable values live in `src/config/evergrow.config.ts`. This is the list of 
 - **saveSchemaVersion:** 1
 
 > Updated by D041: added camera tiltStepDeg, zoomKeyStep, minDistance, maxDistance, mousePanSpeed, smoothTime, draggingSmoothTime and maxFrameDelta, the whole lighting section, and ui.itemUidPrefix. `rotateSpeed` and `zoomSpeed` are CameraControls multipliers; `panSpeed` is keyboard world units/second.
+>
+> Updated by D047: added ui.devSeedKey, per-tile topColor/sideColor/topOpacity, the water section (floorColor, floorDepth) and rendering.transparentRenderOrder; removed world.cellSize because 1 unit = 1 cell is fixed (§11.2).
 
 
 ---

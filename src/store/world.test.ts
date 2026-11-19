@@ -134,6 +134,33 @@ describe('world store', () => {
     expect(store.getState().undo()).toBeUndefined()
   })
 
+  it('records where the latest successful change came from', () => {
+    const store = createWorldStore(catalog)
+    expect(store.getState().changeSource).toBe('none')
+
+    store.getState().execute(paint(0, 0))
+    expect(store.getState().changeSource).toBe('execute')
+
+    store.getState().executeBatch([paint(1, 0)])
+    expect(store.getState().changeSource).toBe('batch')
+
+    store.getState().undo()
+    expect(store.getState().changeSource).toBe('undo')
+
+    store.getState().redo()
+    expect(store.getState().changeSource).toBe('redo')
+  })
+
+  it('keeps the previous change source when a command fails', () => {
+    const store = createWorldStore(catalog)
+    store.getState().execute(paint(0, 0))
+    store.getState().execute(paint(1000, 0))
+    expect(store.getState().changeSource).toBe('execute')
+
+    store.getState().executeBatch([paint(1000, 0)])
+    expect(store.getState().changeSource).toBe('execute')
+  })
+
   it('counts a non-empty starter inventory per item id', () => {
     const initial = starterWorld({
       coins: 7,

@@ -123,6 +123,8 @@ describe('evergrow config', () => {
     expect(rendering.pixelRatioCap).toBeGreaterThan(0)
     expect(['high', 'low']).toContain(rendering.quality)
     expect(typeof rendering.bloom).toBe('boolean')
+    expect(Number.isInteger(rendering.transparentRenderOrder)).toBe(true)
+    expect(rendering.transparentRenderOrder).toBeGreaterThanOrEqual(0)
   })
 
   it('defines every tile type', () => {
@@ -133,6 +135,35 @@ describe('evergrow config', () => {
     expect(config.tiles.water.transparent).toBe(true)
     expect(config.tiles.grass.transparent).toBe(false)
     expect(config.tiles.land.transparent).toBe(false)
+  })
+
+  it('styles every tile top and side, with water deeper and see-through', () => {
+    const hex = /^#[0-9a-f]{6}$/i
+    const luminance = (colour: string): number => {
+      const value = colour.replace('#', '')
+      const channels = [0, 2, 4].map((start) =>
+        Number.parseInt(value.slice(start, start + 2), 16) / 255,
+      )
+      return channels.reduce((total, channel) => total + channel, 0)
+    }
+
+    for (const tile of TILE_TYPES) {
+      const def = config.tiles[tile]
+      expect(def.topColor).toMatch(hex)
+      expect(def.sideColor).toMatch(hex)
+      expect(luminance(def.topColor)).toBeGreaterThan(luminance(def.sideColor))
+      expect(def.topOpacity).toBeGreaterThan(0)
+      expect(def.topOpacity).toBeLessThanOrEqual(1)
+    }
+
+    expect(config.tiles.water.topOpacity).toBeLessThan(1)
+    expect(config.water.floorColor).toMatch(hex)
+    expect(config.water.floorDepth).toBeGreaterThan(0)
+    expect(config.water.floorDepth).toBeLessThan(config.world.tileThickness)
+  })
+
+  it('names the dev seed key', () => {
+    expect(config.ui.devSeedKey).toBe('F9')
   })
 
   it('starts with zero coins', () => {

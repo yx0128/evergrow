@@ -127,6 +127,8 @@ export interface RenderingConfig {
   readonly pixelRatioCap: number
   readonly quality: Quality
   readonly bloom: boolean
+  /** Draw order for transparent tile tops and fade overlays; opaque geometry is 0. */
+  readonly transparentRenderOrder: number
 }
 
 export interface VariationConfig {
@@ -140,6 +142,8 @@ export interface UiConfig {
   readonly storagePrefix: string
   /** Prefix for store-created item uids (D031, D041). */
   readonly itemUidPrefix: string
+  /** Dev-only key that seeds test terrain in the world scene. */
+  readonly devSeedKey: string
   readonly fallback: {
     readonly paddingRem: number
     readonly gapRem: number
@@ -172,6 +176,16 @@ export interface PaletteConfig {
 export interface TileDef {
   readonly name: string
   readonly transparent: boolean
+  readonly topColor: string
+  readonly sideColor: string
+  /** The top surface's opacity; opaque tiles use 1. */
+  readonly topOpacity: number
+}
+
+export interface WaterConfig {
+  readonly floorColor: string
+  /** Distance from the water top surface down to its opaque floor, in world units. */
+  readonly floorDepth: number
 }
 
 export interface PointLightDef {
@@ -234,6 +248,7 @@ export interface EvergrowConfig {
   readonly starter: StarterConfig
   readonly palette: PaletteConfig
   readonly tiles: Readonly<Record<TileType, TileDef>>
+  readonly water: WaterConfig
   readonly items: readonly ItemDef[]
   readonly strings: StringsConfig
   readonly saveSchemaVersion: number
@@ -355,6 +370,7 @@ export const CONFIG: EvergrowConfig = {
     pixelRatioCap: 2,
     quality: 'high',
     bloom: false,
+    transparentRenderOrder: 1,
   },
 
   variation: {
@@ -367,6 +383,7 @@ export const CONFIG: EvergrowConfig = {
     autosaveDebounceMs: 500,
     storagePrefix: 'evergrow:',
     itemUidPrefix: 'item-',
+    devSeedKey: 'F9',
     fallback: {
       paddingRem: 2,
       gapRem: 0.5,
@@ -403,9 +420,32 @@ export const CONFIG: EvergrowConfig = {
   },
 
   tiles: {
-    grass: { name: 'Grass', transparent: false },
-    land: { name: 'Land', transparent: false },
-    water: { name: 'Water', transparent: true },
+    grass: {
+      name: 'Grass',
+      transparent: false,
+      topColor: '#8fbd72',
+      sideColor: '#6f9d57',
+      topOpacity: 1,
+    },
+    land: {
+      name: 'Land',
+      transparent: false,
+      topColor: '#cfc2a5',
+      sideColor: '#b0a184',
+      topOpacity: 1,
+    },
+    water: {
+      name: 'Water',
+      transparent: true,
+      topColor: '#83c9bd',
+      sideColor: '#4f9d96',
+      topOpacity: 0.72,
+    },
+  },
+
+  water: {
+    floorColor: '#2f6f6b',
+    floorDepth: 0.15,
   },
 
   // TODO(decision): item catalog pending; add items once the list is chosen.

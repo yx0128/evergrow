@@ -9,12 +9,14 @@ Scaffold complete, plus pure world logic for grid coordinates, the buildable zon
 tile cells, column levels, item footprints, placement validation, occupancy,
 connection masks and undoable world commands. A Zustand world store wraps the command
 history, and the R3F scene has an orthographic camera rig (orbit, pan, zoom, tilt,
-Home tween, bounds and reduced motion), soft lighting and temporary debug cells. The
-typed config catalog exists and a full-window canvas renders the day background.
+Home tween, bounds and reduced motion), soft lighting, and instanced tile columns in
+16×16 chunks. Placeholder tile meshes, water floors and level fades come from config;
+F9 seeds dev terrain through real commands. The typed config catalog exists and a
+full-window canvas renders the day background.
 
-**Next step:** render tiles and items from the store (replacing the DEBUG grid and
-boxes), then build placement and the shop/inventory drag flow. Open decisions: D003
-(item catalog and starter item), D007 (fonts) and D034 (no-op undo steps).
+**Next step:** build placement interaction and the hidden grid, then render items and
+the shop/inventory drag flow. Open decisions: D003 (item catalog and starter item),
+D007 (fonts) and D034 (no-op undo steps).
 
 ## Workflow rules
 
@@ -318,9 +320,10 @@ are deep-equal afterwards.
 ## World store and scene
 
 - `src/store/world.ts`: `createWorldStore(catalog, initial)` (tests supply a catalog)
-  and the app's `useWorldStore`. State is `WorldState` plus `history`, `canUndo` and
-  `canRedo`. `execute`, `executeBatch`, `undo` and `redo` wrap the pure history
-  functions and update state only on success; failures return the logic result
+  and the app's `useWorldStore`. State is `WorldState` plus `history`, `canUndo`,
+  `canRedo` and `changeSource` (`execute`, `batch`, `undo` or `redo`; D046).
+  `execute`, `executeBatch`, `undo` and `redo` wrap the pure history functions and
+  update state only on success; failures return the logic result
   unchanged. `undo`/`redo` return `undefined` instead of throwing when the guard is
   false. `clearHistory` resets to `EMPTY_HISTORY` without touching the world.
 - Place commands may omit `uid`; the store creates one (D031) and keeps a supplied uid.
@@ -347,8 +350,35 @@ are deep-equal afterwards.
 - `src/scene/Lighting.tsx`: ambient, hemisphere and shadow-casting directional lights
   from the `lighting` config. `shadowCameraBounds` covers the whole bounds rectangle,
   including `maxStack` height, as seen from the light direction.
-- `src/scene/World.tsx` and `src/store/devSeed.ts` are DEBUG: a faint start-zone grid,
-  three seeded paint tiles in dev only, and cell boxes read from the store.
+- `src/scene/tileGeometry.ts`: pure chunking, `groupByChunk`, `exposedSides`,
+  `affectedChunks`, `diffLevels`, `sidePlacement`, `planFades` and `shouldFadeTiles`,
+  unit-tested against a hand-counted layout, outward side rotations, every fade case
+  and the fade rule for each change source and reduced motion.
+- `src/scene/tileState.ts`: `TileSceneState` holds committed cells, chunk contents and
+  active fades. `applyFadePlan`, `finishFade` and `commitTileCells` update all three in
+  one state update, so a finished fade-in never leaves a frame without the level
+  (D048).
+- `src/scene/TileChunks.tsx`: one component per chunk, with one exact-sized
+  `InstancedMesh` per tile type and part (top, side, water floor). Top meshes keep an
+  instance id → cell lookup in `userData.tileCells` for the placement raycast. Only
+  chunks from `affectedChunks` rebuild; unchanged chunk data keeps its identity.
+  Placement must raycast against chunk tops and fade-in overlay tops, because a fading
+  level lives only in the overlay until its fade ends; fade-out tops are not tagged.
+- `src/scene/tileMeshes.ts`: the `TileMeshSource` interface (`top` and `side` geometry
+  plus material) and placeholder planes. The real `tile_<type>.glb` parts can replace
+  them. Side meshes face +Z (D045).
+- `src/scene/TileFades.tsx` and `TileChunks.tsx`: short-lived overlays built from the
+  `TileMeshSource` top and side parts, drawing only `exposedSides()` for the fading
+  levels with cloned transparent materials. Added levels fade in, removed levels fade
+  out; undo, redo and type changes are instant, and reduced motion disables fades
+  (D043, D044, D048). Fade-in overlay tops carry `userData.tileCells`; fade-out tops
+  do not.
+- `src/store/devSeed.ts` and `src/scene/devSeedShortcut.ts`: F9 in dev builds paints a
+  grass staircase, a low land strip and a raised water pool across a chunk border,
+  then clears the history. The key guard ignores other keys, repeats, inputs and
+  modifiers, and is dev-only.
+- `src/scene/World.tsx`: lights, camera rig, tile chunks and the dev-only F9 handler.
+  The hidden grid and first-item seeding are not built yet (§4.6).
 
 ## Release and community docs
 
@@ -1363,3 +1393,142 @@ Verification:
 
 - `npm test` remains 303 tests (all pass); `npm run build` and `npm run lint` pass
   (existing chunk-size warning only).
+
+### 2026-11-20 — build: instanced tile columns and level fades
+
+Done:
+
+- Added pure `src/scene/tileGeometry.ts` and its tests: negative-safe `chunkOf`,
+  `groupByChunk`, `exposedSides` (N = −Z, D017), `affectedChunks` with chunk-border
+  neighbours, and `diffLevels`. The fixed four-column layout has 20 exposed faces.
+- Added config for cell size, per-tile top/side colours and top opacity, the water
+  floor colour and depth, and the F9 dev seed key. Config tests check top colours are
+  lighter and water is see-through with a floor.
+- Added `src/scene/tileMeshes.ts` with the `TileMeshSource` placeholder parts and
+  `src/scene/TileChunks.tsx`: exact-size instanced tops, sides and water floors per
+  chunk, cell-centre placement (D037), derived Y, shadows, transparent water tops
+  rendered last, and an instance id → cell lookup for the placement raycast. Only
+  `affectedChunks()` rebuild; unchanged chunk data keeps its identity. A dev log lists
+  the rebuilt chunk keys.
+- Added `src/scene/TileFades.tsx` overlay meshes. Levels fade in over
+  `tileAddFadeMs` and removed levels fade out over `digUpFadeMs`; type changes, undo
+  and redo are instant, as is everything under reduced motion. Chunks rebuild once
+  when a fade-in commits, never per frame. A neighbour's newly exposed side can
+  therefore appear before a fade-out ends; this is accepted.
+- The world store now records `changeSource` (`execute`, `batch`, `undo`, `redo`) with
+  tests, so fades can skip history moves (D046).
+- Removed the debug start-zone grid and cell boxes and the automatic mount seed.
+  Dev builds seed terrain on F9 through `paint` and `setLevel`, once per session,
+  respecting the shortcut focus guards; the handler is dev-only.
+- Water side materials are double-sided so a steep view through the transparent top
+  hits an interior wall if the floor is missed; noted in D042.
+
+Why: render the store's tile columns with the smallest rebuild scope, and establish
+the fade and water conventions before placement and item rendering.
+
+Verification:
+
+- `npm test` 303 → 340 tests (all pass), `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage` passes; new pure geometry is covered.
+- Headless Chrome on `npm run dev` showed the seeded staircase, land and raised water
+  after F9, with the lighter water top over its floor and no background showing. The
+  dev log reported rebuilding chunks `-1,-1, 0,-1, -1,0, 0,0` for the seed.
+
+### 2026-11-20 — fix: tile fade handover, exposed-side overlays and fade tests
+
+Done:
+
+- Removed the fade-in timer. `handOverFade` commits the latest cells before removing a
+  fade-in overlay, so a level is always drawn by the chunk or the overlay. Fade-outs
+  still leave the chunk at once and remove their overlay when finished (D047).
+- Moved fade planning into pure `planFades` in `tileGeometry.ts`, with tests for
+  execute, batch, undo, redo, reduced motion, type changes, new and raised columns,
+  dig up and lowering, a second change during a pending fade-in, and no-op changes.
+- Rebuilt fade overlays from `source.top` and `source.side`, drawing only the exposed
+  sides for the fade levels through the shared `sidePlacement` helper. Overlay
+  materials are transparent clones disposed on unmount, so fade tops keep the tile
+  top colour (D044).
+- Overlay tops now carry `userData.tileCells` with their cell, the same shape as chunk
+  tops. Placement must raycast against both sets (recorded above).
+- Removed `world.cellSize`; unit geometry and the existing cell-centre/0.5 convention
+  are used instead. Added `rendering.transparentRenderOrder` for water tops and
+  overlays, derived the dev water level from `maxStack`, and moved the F9 guard into
+  tested `isDevSeedShortcut`.
+- Strengthened devSeed tests for the chunk border and both warning branches, and added
+  shortcut tests for other keys, repeats, inputs, modifiers and production builds.
+- Deferred the water-edge gap where water meets equal or taller land/grass: a thin
+  background strip can show through the water. When the real tile assets land, check
+  water beside equal and taller land and grass at the Home angle and at 80° polar.
+  D042's visual check did not include this layout.
+
+Why: the separate fade timer and overlay could remove each other for one frame; the
+box overlay also drew wrong tops and hidden sides and could not match real tile art.
+
+Verification:
+
+- `npm test` 340 → 362 tests (all pass), `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage` passes; `planFades` and `handOverFade` are covered by the new
+  pure tests. `sidePlacement` coverage was added in the follow-up fix.
+- Headless Chrome on `npm run dev`: loaded the page, pressed F9, raised a tile and
+  captured frames across the fade. No console errors or exceptions appeared and no
+  frame was missing the tile.
+
+### 2026-11-20 — fix: atomic fade handover and side placement tests
+
+Done:
+
+- Moved committed cells, chunk contents and fades into one `TileSceneState`.
+  `applyFadePlan`, `finishFade` and `commitTileCells` in `tileState.ts` return a single
+  next state, and `buildChunkContent` moved there. Finishing a fade-in now rebuilds
+  the affected chunks and removes its overlay in the same update (D048).
+- Removed the separate committed → chunks effect, `handOverFade`, the fade timer
+  leftovers and the dead pending-fade branch in `planFades`.
+- Moved `ChangeSource` back to `src/store/world.ts`, with `shouldFadeTiles` turning a
+  source and reduced motion into the boolean `planFades` takes. `src/logic` no longer
+  knows about it.
+- Fade-in overlay tops keep `userData.tileCells`; fade-out tops delete it, so the
+  placement raycast can never hit a tile being dug away.
+- Added `sidePlacement` tests for N/E/S/W positions, heights, rotations and outward
+  +Z normals, plus `tileState` tests for fade-in and fade-out handovers and unchanged
+  chunk identity.
+
+Why: the previous callback updated committed cells and fades in one render, while the
+chunk rebuild happened in a later effect. That left one render where neither the
+overlay nor the chunk drew the new level. One state object removes that gap and makes
+the handover testable.
+
+Verification:
+
+- `npm test` 362 → 366 tests (all pass), `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage` passes; `sidePlacement` has no uncovered lines.
+- Headless Chrome on `npm run dev`: loaded, pressed F9, painted, raised and dug a
+  tile. No console errors or exceptions appeared.
+
+### 2026-11-20 — fix: water floor tests and fade rule placement
+
+Done:
+
+- Added a `tileState` test for a water column beside grass and land: one water top at
+  `level × tileThickness`, one floor `water.floorDepth` below it, and no floors on the
+  other tile types.
+- Moved `shouldFadeTiles` from the store to `tileGeometry.ts`, next to `planFades`,
+  with a type-only `ChangeSource` import. Added direct tests for execute/batch,
+  undo/redo/none and every source under reduced motion.
+- Recorded that the previous fix removed the dev-only chunk rebuild log. It is not
+  restored; the unchanged-chunk identity test in `tileState.test.ts` is now the
+  evidence for the rebuild scope.
+
+Why: the water floor branch had no test, and whether a tile fades is a display rule,
+so it belongs with the scene planner rather than the world store. The removed dev log
+was accurate when the earlier entry was written but no longer exists.
+
+Verification:
+
+- `npm test` 366 → 373 tests (all pass), `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage` shows `tileState.ts` water-floor code covered.
+- Headless Chrome on `npm run dev`: loaded the page and pressed F9 with no console
+  errors.
