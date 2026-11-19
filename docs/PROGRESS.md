@@ -141,7 +141,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 262 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
+npm test         # 265 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -162,6 +162,7 @@ fixtures live in `src/logic/testing/` and are excluded from coverage.
 - `Catalog = ReadonlyMap<string, ItemDef>` is the item definition map used across
   the logic.
 - `validateCatalog(items, starterItems)` returns human-readable errors (empty = valid).
+  It rejects non-square footprints (D028) and connectable items that are not 1×1 (D025).
 - `itemDefinition(catalog, id)` returns the `ItemDef` and throws
   `Unknown item id: <id>` for a missing entry. Placement, connection and level logic
   all use this lookup; `cells.ts` does not define or re-export it.
@@ -233,7 +234,8 @@ fixtures live in `src/logic/testing/` and are excluded from coverage.
 
 ### `src/logic/connect.ts`
 
-- Connectable items are 1×1 (D025); placement validation is unchanged.
+- Connectable items are 1×1, enforced by `validateCatalog` (D025); placement validation
+  is unchanged.
 - `getConnectionMask(uid, items, occupancy, catalog)` returns 0 for a missing or
   non-connectable item and otherwise 4 bits: N=1, E=2, S=4, W=8. A bit is set when the
   orthogonal neighbour holds an item with the same id. A missing catalog entry throws.
@@ -1125,3 +1127,25 @@ Verification:
   docs/DECISIONS.md and docs/PROGRESS.md.
 - A sorted-line comparison of docs/PROGRESS.md against e7ebb49 shows only the "Done"
   bullet changes above; no other line was added or removed.
+
+### 2026-11-19 — fix: enforce 1×1 connectable footprints
+
+Done:
+
+- `validateCatalog` now rejects a connectable item whose footprint is not `[1, 1]`
+  with `connectable item must be 1×1: <id>` (D025).
+- Added catalog tests for a 2×2 connectable item, a 1×2 connectable item (pins the
+  depth check) and valid 1×1 connectable and 2×2 non-connectable items.
+- Updated D025 and the catalog and connect reference sections.
+
+Why: D025 says connectable items are always 1×1, but nothing enforced it, and
+`getConnectionMask` checks only the anchor cell's four neighbours.
+
+Verification:
+
+- `npm test` 262 → 265 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- Deleting `|| item.footprint[1] !== 1` made the 1×2 test fail; the line was restored.
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+- Changing the new `!==` checks to `===` made both new catalog tests fail; the code
+  was restored and `git diff` shows only the intended check.

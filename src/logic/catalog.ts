@@ -32,6 +32,9 @@ export function validateCatalog(
     if (item.footprint[0] !== item.footprint[1]) {
       errors.push(`non-square footprint: ${item.id}`)
     }
+    if (item.connectable && (item.footprint[0] !== 1 || item.footprint[1] !== 1)) {
+      errors.push(`connectable item must be 1×1: ${item.id}`)
+    }
     if (!item.allowedTiles.includes(item.defaultTile)) {
       errors.push(`default tile not allowed: ${item.id}`)
     }

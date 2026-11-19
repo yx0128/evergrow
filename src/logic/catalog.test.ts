@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { CONFIG } from '../config/evergrow.config'
 import type { ItemDef } from '../config/evergrow.config'
 import { itemDefinition, validateCatalog } from './catalog'
+import { item } from './testing/fixtures'
 
 const validItem: ItemDef = {
   id: 'cottage',
@@ -58,6 +59,27 @@ describe('validateCatalog', () => {
     )
     expect(validateCatalog([{ ...validItem, footprint: [1, 1] }], [])).toEqual([])
     expect(validateCatalog([validItem], [])).toEqual([])
+  })
+
+  it('rejects a connectable item larger than 1×1', () => {
+    const bigFence = item({ id: 'big-fence', footprint: [2, 2], connectable: true })
+    expect(validateCatalog([bigFence], [])).toEqual([
+      'connectable item must be 1×1: big-fence',
+    ])
+  })
+
+  it('rejects a connectable item that is 1 wide but not 1 deep', () => {
+    const longFence = item({ id: 'long-fence', footprint: [1, 2], connectable: true })
+    expect(validateCatalog([longFence], [])).toEqual([
+      'non-square footprint: long-fence',
+      'connectable item must be 1×1: long-fence',
+    ])
+  })
+
+  it('accepts a 1×1 connectable item and a 2×2 non-connectable item', () => {
+    const fence = item({ id: 'fence', footprint: [1, 1], connectable: true })
+    const cottage = item({ id: 'cottage', footprint: [2, 2] })
+    expect(validateCatalog([fence, cottage], [])).toEqual([])
   })
 
   it('rejects a default tile that is not allowed', () => {
