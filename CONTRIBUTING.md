@@ -6,6 +6,7 @@ Thanks for helping. Keep changes small, calm and consistent with the project's t
 
 - Read [`docs/PROGRESS.md`](docs/PROGRESS.md) for architecture and setup.
 - Read [`docs/BRIEF.md`](docs/BRIEF.md) for the product rules and [`docs/DECISIONS.md`](docs/DECISIONS.md) for resolved choices.
+- Read [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for how the layers fit together.
 - Open an issue for anything larger than a small fix.
 
 ## Local workflow
@@ -14,6 +15,7 @@ Thanks for helping. Keep changes small, calm and consistent with the project's t
 npm install
 npm run dev
 npm test
+npm run coverage
 npm run lint
 npm run typecheck
 npm run build
@@ -26,7 +28,7 @@ npm run build
 - Add tests for logic changes before wiring them to the scene or UI.
 - Do not hard-code public asset paths; use `assetUrl()`.
 - Prefix localStorage keys with `storageKey()`.
-- Keep motion and visuals within the brief: no bounce, pop, shake, particles or glow.
+- Keep motion and visuals within the brief (§9): no bounce, scale pop, shake, particles, confetti, sparkle, pulse, coin bursts or flying coins.
 - Do not commit secrets, tokens or local save data.
 
 ## Commits and pull requests

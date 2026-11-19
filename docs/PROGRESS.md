@@ -1149,3 +1149,21 @@ Verification:
 - `npm run coverage`: every file at 100% statements, branches, functions and lines.
 - Changing the new `!==` checks to `===` made both new catalog tests fail; the code
   was restored and `git diff` shows only the intended check.
+
+### 2026-11-19 — docs: align contributing guide with the brief
+
+Done:
+
+- Replaced the old "no glow" guideline with the brief §9 banned-effects list, which
+  allows the `EMIT_` night glow from §8.
+- Added the architecture doc to "Before you start" and `npm run coverage` to the local
+  workflow commands.
+
+Why: CONTRIBUTING.md banned glow, contradicting the brief's emissive night materials,
+and it was missing the architecture doc and coverage command used elsewhere.
+
+Verification:
+
+- `git grep -n "or glow" -- CONTRIBUTING.md` returns nothing.
+- `npm test` 265/265, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only). Only CONTRIBUTING.md and docs/PROGRESS.md changed.
