@@ -420,19 +420,23 @@ All tunable values live in `src/config/evergrow.config.ts`. This is the list of 
   - free: coinsPerBlock, blockMinutes, minMinutes
   - pomodoro: focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, coinsPerBlock
 - **world:** maxSize, startZone, buildableRing, maxStack, minStack, tileThickness (fixed), chunkSize, cameraBoundsMargin
-- **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, homePosition, defaultZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
+- **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, minDistance, maxDistance, homePosition, defaultZoom, snapRotateDeg, tiltStepDeg, zoomKeyStep, transitionMs, panSpeed, mousePanSpeed, rotateSpeed, zoomSpeed, smoothTime, draggingSmoothTime, maxFrameDelta
+- **lighting:** ambientColor, ambientIntensity, hemisphereSkyColor, hemisphereGroundColor, hemisphereIntensity, directionalColor, directionalIntensity, directionalPosition, shadowRadius, shadowPadding, shadowBias, shadowNear, shadowFar
 - **history:** limit
 - **motion:** dropFadeMs, digUpFadeMs, tileAddFadeMs, coinCountUpMs, gridFadeMs, panelMs, ghostLerpMs, ghostOpacity
 - **dayNight:** useLocalTime, keyframes (dawn, day, dusk, night)
 - **rendering:** shadowMapSize, maxPointLights, pixelRatioCap, quality (high or low), bloom
 - **variation:** scale, hue
-- **ui:** toastMs, autosaveDebounceMs, storagePrefix, fallback (WebGL message layout)
+- **ui:** toastMs, autosaveDebounceMs, storagePrefix, itemUidPrefix, fallback (WebGL message layout)
 - **starter:** coins, items
 - **palette:** shared colours (background per time of day, valid/invalid tint, UI)
 - **tiles:** grass ("Grass"), land ("Land"), water ("Water", semi-transparent top)
 - **items:** the item catalog (name, category, footprint, allowedTiles, price; see §6.1)
 - **strings:** invalid-reason messages, WebGL-unavailable message
 - **saveSchemaVersion:** 1
+
+> Updated by D041: added camera tiltStepDeg, zoomKeyStep, minDistance, maxDistance, mousePanSpeed, smoothTime, draggingSmoothTime and maxFrameDelta, the whole lighting section, and ui.itemUidPrefix. `rotateSpeed` and `zoomSpeed` are CameraControls multipliers; `panSpeed` is keyboard world units/second.
+
 
 ---
 

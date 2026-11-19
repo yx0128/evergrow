@@ -51,13 +51,53 @@ export interface CameraConfig {
   readonly maxPolarDeg: number
   readonly minZoom: number
   readonly maxZoom: number
+  /** Camera distance limits in world units; keeps the camera off the target and inside the far plane. */
+  readonly minDistance: number
+  readonly maxDistance: number
+  /** World-space offset from the home target (ground level). */
   readonly homePosition: readonly [number, number, number]
   readonly defaultZoom: number
   readonly snapRotateDeg: number
+  /** PageUp/PageDown tilt step in degrees. */
+  readonly tiltStepDeg: number
+  /** Zoom change per `+`/`-` key press, in camera zoom units. */
+  readonly zoomKeyStep: number
+  /** Ease duration for H/Q/E camera moves, in milliseconds. */
   readonly transitionMs: number
+  /** Keyboard pan in world units per second. */
   readonly panSpeed: number
+  /**
+   * CameraControls truckSpeed for mouse pan. 1 keeps the ground under the cursor for
+   * horizontal drags; vertical drags move by screen height, about 57% of the cursor at
+   * the home tilt.
+   */
+  readonly mousePanSpeed: number
+  /** Mouse orbit multiplier; 1 turns about 90° per screen height. */
   readonly rotateSpeed: number
+  /** Wheel zoom multiplier (CameraControls `dollySpeed`); 1 is the library default. */
   readonly zoomSpeed: number
+  /** CameraControls settle time after non-drag moves, in seconds. */
+  readonly smoothTime: number
+  /** CameraControls settle time while dragging, in seconds. */
+  readonly draggingSmoothTime: number
+  /** Largest frame delta used for keyboard panning, in seconds. */
+  readonly maxFrameDelta: number
+}
+
+export interface LightingConfig {
+  readonly ambientColor: string
+  readonly ambientIntensity: number
+  readonly hemisphereSkyColor: string
+  readonly hemisphereGroundColor: string
+  readonly hemisphereIntensity: number
+  readonly directionalColor: string
+  readonly directionalIntensity: number
+  readonly directionalPosition: readonly [number, number, number]
+  readonly shadowRadius: number
+  readonly shadowPadding: number
+  readonly shadowBias: number
+  readonly shadowNear: number
+  readonly shadowFar: number
 }
 
 export interface HistoryConfig {
@@ -98,6 +138,8 @@ export interface UiConfig {
   readonly toastMs: number
   readonly autosaveDebounceMs: number
   readonly storagePrefix: string
+  /** Prefix for store-created item uids (D031, D041). */
+  readonly itemUidPrefix: string
   readonly fallback: {
     readonly paddingRem: number
     readonly gapRem: number
@@ -182,6 +224,7 @@ export interface EvergrowConfig {
   readonly focus: FocusConfig
   readonly world: WorldConfig
   readonly camera: CameraConfig
+  readonly lighting: LightingConfig
   readonly motion: MotionConfig
   readonly history: HistoryConfig
   readonly dayNight: DayNightConfig
@@ -248,13 +291,37 @@ export const CONFIG: EvergrowConfig = {
     maxPolarDeg: 80,
     minZoom: 12,
     maxZoom: 48,
+    minDistance: 1,
+    maxDistance: 200,
     homePosition: [10, 10, 10],
     defaultZoom: 24,
     snapRotateDeg: 90,
+    tiltStepDeg: 15,
+    zoomKeyStep: 2,
     transitionMs: 300,
     panSpeed: 12,
-    rotateSpeed: 90,
-    zoomSpeed: 0.0015,
+    mousePanSpeed: 1,
+    rotateSpeed: 1,
+    zoomSpeed: 1,
+    smoothTime: 0.25,
+    draggingSmoothTime: 0.125,
+    maxFrameDelta: 0.1,
+  },
+
+  lighting: {
+    ambientColor: '#fff4e6',
+    ambientIntensity: 0.45,
+    hemisphereSkyColor: '#dfe8f0',
+    hemisphereGroundColor: '#b7a389',
+    hemisphereIntensity: 0.55,
+    directionalColor: '#fff2dc',
+    directionalIntensity: 1.6,
+    directionalPosition: [12, 18, 8],
+    shadowRadius: 4,
+    shadowPadding: 2,
+    shadowBias: -0.0001,
+    shadowNear: 0.1,
+    shadowFar: 120,
   },
 
   history: {
@@ -299,6 +366,7 @@ export const CONFIG: EvergrowConfig = {
     toastMs: 3000,
     autosaveDebounceMs: 500,
     storagePrefix: 'evergrow:',
+    itemUidPrefix: 'item-',
     fallback: {
       paddingRem: 2,
       gapRem: 0.5,

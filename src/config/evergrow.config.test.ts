@@ -56,6 +56,34 @@ describe('evergrow config', () => {
     expect(polar).toBeLessThanOrEqual(camera.maxPolarDeg)
     expect(camera.transitionMs).toBeGreaterThan(0)
     expect(camera.snapRotateDeg).toBe(90)
+    expect(camera.tiltStepDeg).toBeGreaterThan(0)
+    expect(camera.zoomKeyStep).toBeGreaterThan(0)
+    expect(camera.minDistance).toBeGreaterThan(0)
+    expect(camera.maxDistance).toBeGreaterThan(camera.minDistance)
+    expect(camera.rotateSpeed).toBeGreaterThan(0)
+    expect(camera.zoomSpeed).toBeGreaterThan(0)
+    expect(camera.panSpeed).toBeGreaterThan(0)
+    expect(camera.mousePanSpeed).toBeGreaterThan(0)
+    expect(camera.smoothTime).toBeGreaterThanOrEqual(0)
+    expect(camera.draggingSmoothTime).toBeGreaterThanOrEqual(0)
+    expect(camera.maxFrameDelta).toBeGreaterThan(0)
+  })
+
+  it('has a warm lighting rig with shadows', () => {
+    const { lighting } = config
+    const hex = /^#[0-9a-f]{6}$/i
+    expect(lighting.ambientColor).toMatch(hex)
+    expect(lighting.ambientIntensity).toBeGreaterThanOrEqual(0)
+    expect(lighting.hemisphereSkyColor).toMatch(hex)
+    expect(lighting.hemisphereGroundColor).toMatch(hex)
+    expect(lighting.hemisphereIntensity).toBeGreaterThanOrEqual(0)
+    expect(lighting.directionalColor).toMatch(hex)
+    expect(lighting.directionalIntensity).toBeGreaterThan(0)
+    expect(lighting.shadowRadius).toBeGreaterThanOrEqual(0)
+    expect(lighting.shadowBias).not.toBe(0)
+    expect(lighting.shadowPadding).toBeGreaterThanOrEqual(0)
+    expect(lighting.shadowNear).toBeGreaterThan(0)
+    expect(lighting.shadowFar).toBeGreaterThan(lighting.shadowNear)
   })
 
   it('has a positive integer undo history limit', () => {

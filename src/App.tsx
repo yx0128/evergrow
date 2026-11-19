@@ -1,6 +1,7 @@
 import { Canvas } from '@react-three/fiber'
 import type { CSSProperties } from 'react'
 import { CONFIG } from './config/evergrow.config'
+import { World } from './scene/World'
 import { ErrorBoundary } from './ui/ErrorBoundary'
 
 const background = CONFIG.palette.background.day
@@ -53,9 +54,11 @@ function App() {
           }}
           dpr={[1, CONFIG.rendering.pixelRatioCap]}
           gl={{ antialias: CONFIG.rendering.quality === 'high' }}
+          shadows="percentage"
           fallback={unavailable}
         >
           <color attach="background" args={[background]} />
+          <World />
         </Canvas>
       </ErrorBoundary>
     </div>

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react'
-import type { CSSProperties, ReactElement, ReactNode } from 'react'
+import { Children, type CSSProperties, type ReactElement, type ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CONFIG } from './config/evergrow.config'
 import App from './App'
@@ -56,8 +56,10 @@ describe('App', () => {
     const canvas = screen.getByTestId('canvas')
     expect(canvas.style.backgroundColor).toBe(rgb(CONFIG.palette.background.day))
 
-    const child = canvasState.children as ReactElement<{ args: readonly string[] }>
-    expect(child.type).toBe('color')
+    const child = Children.toArray(canvasState.children).find(
+      (node) => (node as ReactElement).type === 'color',
+    ) as ReactElement<{ args: readonly string[] }>
+    expect(child).toBeDefined()
     expect(child.props.args[0]).toBe(CONFIG.palette.background.day)
   })
 

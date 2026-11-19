@@ -12,16 +12,19 @@ R3F scene (src/scene) ──┘                                        │
                                        Config (src/config/evergrow.config.ts)
 ```
 
-**Status:** config, pure logic and the canvas shell exist. Stores, scene content, game
-UI and save/load are planned.
+**Status:** config, pure logic, the world store and a 3D scene shell exist. The scene
+has the camera rig, lighting and temporary debug cells. Tile/item rendering, game UI
+and save/load are planned.
 
 - **Config** is the single source of truth for tunables, catalogs and strings.
 - **Logic** is framework-free TypeScript and unit-tested, including the world commands
   and undo history. It must not import React, Three.js, R3F, Zustand, stores, the scene
   or the browser DOM.
-- **Stores** will hold session state and run commands. Persistence will go through
+- **Stores** hold session state and run commands. `world.ts` wraps the command history;
+  `ui.ts` holds mode, selection, drag and tool state. Persistence will go through
   `src/logic/save.ts`, which currently provides only `storageKey()`.
-- **Scene** will read state and render it. It never changes world rules directly.
+- **Scene** reads state and renders it (camera rig, lighting, debug cells). It never
+  changes world rules directly.
 - **UI** will read store selectors and call store actions.
 
 ## World model

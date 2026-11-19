@@ -7,13 +7,14 @@ Read the client brief at [`BRIEF.md`](./BRIEF.md), then this file,
 
 Scaffold complete, plus pure world logic for grid coordinates, the buildable zone,
 tile cells, column levels, item footprints, placement validation, occupancy,
-connection masks and undoable world commands. The typed config catalog exists and a
-full-window orthographic R3F canvas renders the day background. Logic is not wired to
-stores, rendering or UI yet.
+connection masks and undoable world commands. A Zustand world store wraps the command
+history, and the R3F scene has an orthographic camera rig (orbit, pan, zoom, tilt,
+Home tween, bounds and reduced motion), soft lighting and temporary debug cells. The
+typed config catalog exists and a full-window canvas renders the day background.
 
-**Next step:** build the Zustand world store on top of `src/logic/commands.ts`, then
-render tiles and items. Open decisions: D003 (item catalog and starter item), D007
-(fonts) and D034 (no-op undo steps).
+**Next step:** render tiles and items from the store (replacing the DEBUG grid and
+boxes), then build placement and the shop/inventory drag flow. Open decisions: D003
+(item catalog and starter item), D007 (fonts) and D034 (no-op undo steps).
 
 ## Workflow rules
 
@@ -141,7 +142,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 ## Verification
 
 ```bash
-npm test         # 265 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard)
+npm test         # 303 tests (config, catalog, assets, UI, redirect, grid, cells, footprint, placement, connect, commands, save, purity, import guard, world store, camera math and bindings, dev seed)
 npm run build    # tsc -b + vite build (base "/evergrow/")
 npm run lint     # oxlint
 npm run coverage   # line/branch coverage; HTML report in coverage/index.html
@@ -313,6 +314,41 @@ Calls every exported map function and pure helper (`setCell`,
 `rotatedSize`, `getFootprintCells`, `buildOccupancy`, `itemAt`, `validatePlacement`,
 `getConnectionMask`), snapshotting inputs with `structuredClone` and asserting they
 are deep-equal afterwards.
+
+## World store and scene
+
+- `src/store/world.ts`: `createWorldStore(catalog, initial)` (tests supply a catalog)
+  and the app's `useWorldStore`. State is `WorldState` plus `history`, `canUndo` and
+  `canRedo`. `execute`, `executeBatch`, `undo` and `redo` wrap the pure history
+  functions and update state only on success; failures return the logic result
+  unchanged. `undo`/`redo` return `undefined` instead of throwing when the guard is
+  false. `clearHistory` resets to `EMPTY_HISTORY` without touching the world.
+- Place commands may omit `uid`; the store creates one (D031) and keeps a supplied uid.
+- `src/store/ui.ts`: minimal view/edit mode, selection, drag state, active tool and
+  popover target; placement is not built yet.
+- `src/scene/cameraMath.ts`: pure clamping, bounds (including the start-zone fallback),
+  cell centres, orbit, pan vectors, easing and shortcut-focus guards, unit-tested.
+- `src/scene/CameraRig.tsx`: orthographic `CameraControls` with bindings in
+  `cameraBindings.ts`. Left is inert, right-drag orbits, middle-drag and Shift+right-drag
+  screen-pan on the ground plane, and the wheel zooms through `ACTION.ZOOM` within
+  `minZoom`/`maxZoom`. WASD/arrows pan at `panSpeed`, mouse pan uses `mousePanSpeed`,
+  Q/E rotate by `snapRotateDeg`,
+  PageUp/PageDown tilt by `tiltStepDeg` (PageUp toward overhead), and `+`/`-` zoom by
+  `zoomKeyStep`. H and the exposed `goHome()` tween to the land centre (start-zone
+  centre when empty) using `homePosition` as an offset and `defaultZoom`; H/Q/E use a
+  spherical ease over `transitionMs`, or jump instantly under reduced motion. Mouse
+  drag and wheel also become instant under reduced motion via `smoothTime` /
+  `draggingSmoothTime`. Q/E snaps chain continuous unwrapped azimuths from a pending
+  destination, keep Home's destination when pressed mid-Home, and H replaces a running
+  snap. Snap and Home starts are unwrapped to the shortest path. The target stays on the
+  ground plane (y = 0) and is clamped
+  every frame to land bounds plus `cameraBoundsMargin`, or start-zone bounds when there
+  is no land.
+- `src/scene/Lighting.tsx`: ambient, hemisphere and shadow-casting directional lights
+  from the `lighting` config. `shadowCameraBounds` covers the whole bounds rectangle,
+  including `maxStack` height, as seen from the light direction.
+- `src/scene/World.tsx` and `src/store/devSeed.ts` are DEBUG: a faint start-zone grid,
+  three seeded paint tiles in dev only, and cell boxes read from the store.
 
 ## Release and community docs
 
@@ -1187,3 +1223,143 @@ Verification:
 - No tag, push or deploy performed; the project owner handles those after review.
 - Only `package.json`, `package-lock.json`, `CHANGELOG.md` and `docs/PROGRESS.md`
   changed.
+
+### 2026-11-19 — build: world store, camera rig and scene shell
+
+Done:
+
+- Added `src/store/world.ts`: a Zustand store over the command history, with
+  `execute`, `executeBatch`, guarded `undo`/`redo`, `canUndo`/`canRedo` and
+  `clearHistory`. Place commands may omit `uid`; the store fills it (D031).
+- Added `src/store/ui.ts` with minimal mode, selection, drag, tool and popover state.
+- Added `src/scene/cameraMath.ts` (pure clamping, bounds, cell centres, orbit, pan,
+  easing and shortcut guards) and its tests.
+- Added `src/scene/CameraRig.tsx`: orthographic controls with left-click inert,
+  right-drag orbit, middle/Shift+right pan, key pan/tilt/zoom, custom H/Q/E tweens,
+  target bounds and live reduced motion.
+- Added `src/scene/Lighting.tsx` with a new `lighting` config section and the
+  `camera.tiltStepDeg` / `camera.zoomKeyStep` values.
+- Added `src/scene/World.tsx`, the dev-only `src/store/devSeed.ts` and DEBUG start-zone
+  grid and cell boxes. `App.tsx` mounts the scene and enables shadows.
+- Recorded D037: cell `(x, z)` covers `x..x+1, z..z+1`; centre is `(x+0.5, z+0.5)`.
+
+Why: wire the tested world commands into the app and establish the camera feel before
+tile and item rendering.
+
+Verification:
+
+- `npm test` 265 → 286 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- New tests cover store execute/undo/redo/batch, failure reasons, uid creation, empty
+  history guards and `clearHistory`; camera clamping, bounds and the no-land fallback,
+  orbit, pan vectors, easing and shortcut focus guards.
+
+### 2026-11-19 — fix: camera controls, ground pan and shadow coverage
+
+Done:
+
+- Wheel now uses CameraControls `ACTION.ZOOM` (orthographic zoom) with distance limits;
+  middle and Shift+right drag use `ACTION.SCREEN_PAN`.
+- Camera targets are forced to ground level (`y = 0`) and clamped to the bounds every
+  frame, so mouse and key pan cannot leave the ground plane.
+- Q/E use a spherical tween (`lerpSpherical`) so tilt and radius stay constant; rapid
+  snaps chain from the pending destination angle and H replaces a running snap.
+- Home recentres on the land centre, or the start-zone centre when empty (D038).
+- PageUp now tilts toward overhead and PageDown away from it (D040).
+- Wired `rotateSpeed`, `zoomSpeed` and `panSpeed` into CameraControls, added config
+  smoothing values and made all camera motion instant under reduced motion, including
+  jumping a running tween to its end.
+- Added `shadowCameraBounds` to cover the full bounds rectangle and `maxStack` height
+  from the light direction; moved shadow bias and frame-delta cap into config (D041).
+- Switched to `shadows="percentage"` to avoid the removed PCFSoft warning, fixed the
+  debug box height to `(level - 0.5) * tileThickness`, and moved the uid prefix into
+  config.
+- Added tests for bindings, ground clamping, spherical tween/chaining, Home targets,
+  tilt direction, shadow corners, dev seed, store undo failure, batch uids and a
+  non-empty starter inventory.
+
+Verification:
+
+- `npm test` 286 → 298 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run dev` starts cleanly. A headless Chrome check of the dev page showed no app
+  errors and no shadow-map warning; the only messages were the known `THREE.Clock`
+  deprecation from R3F and headless SwiftShader GPU-stall warnings.
+
+### 2026-11-19 — fix: shortest camera tween paths and split pan speeds
+
+Done:
+
+- Added `unwrapAzimuth` and `tweenAzimuth`. Snaps and Home now unwrap the start angle
+  to the shortest path; chained snaps use the continuous angle of the running tween and
+  end at the pending destination ± `snapRotateDeg`.
+- Q/E pressed during Home keeps the Home destination target, radius, polar and zoom
+  (D039).
+- Split keyboard and mouse pan: `panSpeed` is back to 12 world units/second and the new
+  `mousePanSpeed` (1) drives CameraControls `truckSpeed`.
+- PageUp/PageDown during a tween now tilts the tween's destination instead of being
+  overwritten on the next frame.
+- The rig passes a copy of `CAMERA_MOUSE_BUTTONS`, so the Shift+right handler never
+  mutates the exported constant.
+- Updated D039, D041 and the BRIEF §14 list/note.
+
+Verification:
+
+- `npm test` 298 → 303 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- New tests cover the atan2 round-trip chain, Home from −170° to 45°, per-frame sweep
+  bounds, snapping mid-Home, tilt-only pose changes and binding immutability.
+- `npm run dev` starts cleanly. A headless Chrome check showed no app errors and no
+  shadow warning; only the known `THREE.Clock` deprecation from R3F, plus the Vite and
+  React DevTools messages.
+
+### 2026-11-19 — fix: extract snap chaining and tighten camera tests
+
+Done:
+
+- Added pure `chainSnap` in `cameraMath.ts`; the rig now only calls it with the running
+  tween, current pose, time and delta. Removed `snapPose` and made `tweenAzimuth`
+  private, so no unused helper exports remain.
+- Rewrote the chaining tests to call `chainSnap`: idle snap, atan2 round-trip chain
+  across ±180°, snap during Home, and E-then-Q returning to the original azimuth.
+- Added `createMouseButtons()` and froze `CAMERA_MOUSE_BUTTONS`; the rig uses a factory
+  copy, and the test checks distinct objects plus a frozen constant.
+- Clarified the `mousePanSpeed` comment: 1 keeps the ground under the cursor for
+  horizontal drags; vertical drags move by screen height (about 57% at the home tilt).
+
+Why: the rig's chaining algorithm was only mirrored by tests, so a regression in the
+rig could pass. No camera behaviour changed.
+
+Verification:
+
+- `npm test` 303 → 304 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+
+### 2026-11-19 — fix: remove unused camera exports
+
+Done:
+
+- Deleted `orbitPosition` from `cameraMath.ts` and its test; it was only used by tests.
+- Deleted `CAMERA_MOUSE_BUTTONS` from `cameraBindings.ts`. The bindings test now checks
+  all four buttons through `createMouseButtons()` and keeps the distinct-objects check.
+- Audited every remaining export in both modules: each is used outside tests or inside
+  its own module, so no other exports were removed.
+
+Verification:
+
+- `npm test` 304 → 303 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+
+### 2026-11-19 — fix: stale mouse bindings comment
+
+Done:
+
+- Reworded the `createMouseButtons()` comment now that `CAMERA_MOUSE_BUTTONS` is gone.
+- Checked `cameraBindings.ts` and `cameraMath.ts` for comments naming removed exports
+  (`CAMERA_MOUSE_BUTTONS`, `orbitPosition`, `snapPose`, `tweenAzimuth` as an export);
+  none remained. Comment-only change.
+
+Verification:
+
+- `npm test` remains 303 tests (all pass); `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
