@@ -1167,3 +1167,23 @@ Verification:
 - `git grep -n "or glow" -- CONTRIBUTING.md` returns nothing.
 - `npm test` 265/265, `npm run build` and `npm run lint` pass (existing chunk-size
   warning only). Only CONTRIBUTING.md and docs/PROGRESS.md changed.
+
+### 2026-11-19 — docs: v0.2.0 release prep
+
+Done:
+
+- Set `package.json` and `package-lock.json` to 0.2.0 with `npm version`, changing
+  only the version fields.
+- Added the 0.2.0 changelog section for the world logic release and updated the
+  comparison links.
+
+Why: the world logic milestone is ready for a 0.2.0 release review.
+
+Verification:
+
+- `npm ci` succeeds; `npm test` 265/265, `npm run build` and `npm run lint` pass
+  (existing chunk-size warning only).
+- `npm run coverage`: every file at 100% statements, branches, functions and lines.
+- No tag, push or deploy performed; the project owner handles those after review.
+- Only `package.json`, `package-lock.json`, `CHANGELOG.md` and `docs/PROGRESS.md`
+  changed.
