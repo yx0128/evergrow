@@ -6,11 +6,11 @@
 
 [![Deploy](https://github.com/yx0128/evergrow/actions/workflows/deploy.yml/badge.svg)](https://github.com/yx0128/evergrow/actions/workflows/deploy.yml) · [Live demo](https://yx0128.github.io/evergrow/) · [Report a bug](https://github.com/yx0128/evergrow/issues) · [Request a feature](https://github.com/yx0128/evergrow/issues)
 
-![Evergrow screenshot]([PATH_TO_SCREENSHOT_OR_GIF])
+<!-- Screenshot: add once the world renders -->
 
 </div>
 
-> **Project docs:** [brief](docs/BRIEF.md) · [progress](docs/PROGRESS.md) · [decisions](docs/DECISIONS.md) · [build state](docs/STATE.md)
+> **Project docs:** [brief](docs/BRIEF.md) · [progress](docs/PROGRESS.md) · [decisions](docs/DECISIONS.md) · [architecture](docs/ARCHITECTURE.md) · [build state](docs/STATE.md)
 
 
 ---
@@ -44,8 +44,8 @@ Evergrow turns your progress into a cozy little world. Every task you complete e
 3. **Grow your world.** Spend your coins on plants, buildings and decorations.
 4. **Look back.** Your world becomes a reminder of everything you've done.
 
-> **Note:** The features below are planned. The current build is a scaffold with a
-> full-window canvas and no game systems yet.
+> **Note:** The features below are planned. The current build shows a full-window canvas.
+> The world rules exist as tested logic but are not playable yet.
 
 ## Features
 
@@ -95,9 +95,9 @@ Growth happens little by little, one small step at a time. Evergrow's goal is to
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) 22 or later, and npm
+- [Node.js](https://nodejs.org/) 26 (see `.nvmrc`), and npm
 - A desktop browser with WebGL support (Chrome, Edge, Firefox or Safari)
-- [Blender](https://www.blender.org/download/) 4.x (only needed if you want to regenerate the 3D assets)
+- [Blender](https://www.blender.org/download/) 5.3 (only needed if you want to regenerate the 3D assets)
 
 ### Installation
 
@@ -122,7 +122,11 @@ Growth happens little by little, one small step at a time. Evergrow's goal is to
 |---|---|
 | `npm run build` | Builds the app for production into `dist/` |
 | `npm run preview` | Serves the production build at http://localhost:4173/evergrow/ |
-| `npm test` | Runs the test suite |
+| `npm test` | Runs the test suite once |
+| `npm run test:watch` | Runs tests in watch mode |
+| `npm run coverage` | Reports test coverage |
+| `npm run lint` | Runs oxlint |
+| `npm run typecheck` | Checks TypeScript types |
 
 ### Configuration
 
@@ -130,8 +134,8 @@ Every tunable value is in one file: `src/config/evergrow.config.ts`. That includ
 
 ## Deployment
 
-- `.github/workflows/deploy.yml` runs on every push to `main` and on manual dispatch: `npm ci` → `npm test` → `npm run build` → deploy. A failing test stops the deploy.
-- Production builds use `base: "/<repo>/"` derived from `GITHUB_REPOSITORY`, overridable with `VITE_BASE_PATH`. Local dev uses `/`.
+- `.github/workflows/deploy.yml` runs on every push to `main` and on manual dispatch: `npm ci` → `npm run lint` → `npm test` → `npm run build` → deploy. A lint or test failure stops the deploy.
+- Production builds use `base: "/<repo>/"` derived from `GITHUB_REPOSITORY`. `VITE_BASE_PATH` overrides the base everywhere; otherwise local dev uses `/`.
 - Build every public asset URL with `assetUrl()` and keep catalog paths relative.
 - Every localStorage key goes through `storageKey()`.
 - `public/404.html` redirects unknown paths to the project root while keeping the query and hash.
@@ -171,10 +175,12 @@ See the [open issues](https://github.com/yx0128/evergrow/issues) for the full li
 Ideas, feedback and contributions are welcome!
 
 1. Fork the repo
-2. Create a branch (`git checkout -b feature/your-feature`)
+2. Create a branch (`git checkout -b fix/your-change`)
 3. Commit your changes (`git commit -m "Add your feature"`)
-4. Push to the branch (`git push origin feature/your-feature`)
+4. Push to the branch (`git push origin fix/your-change`)
 5. Open a pull request
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for branch and commit rules.
 
 ## License
 
@@ -185,5 +191,4 @@ Distributed under the MIT License. See [`LICENSE`](LICENSE) for details.
 - Inspired by cozy 3D sandbox builders.
 - [pmndrs](https://github.com/pmndrs) for React Three Fiber, drei and Zustand.
 - [Three.js](https://threejs.org/) and [Blender](https://www.blender.org/) communities.
-- Audio credits
-- Font credits
+<!-- Audio and font credits: add when the files are supplied -->

@@ -49,7 +49,7 @@ npm run dev
 4. **Never store absolute Y positions.** Y is always derived: `level × tileThickness`.
 5. **Pure logic has unit tests** (Vitest) before it is wired to rendering.
 
-> Updated by D036: `store` and `sell` replace `remove`.
+> Updated by D036: `store` and `sell` replace `remove`. The command list also includes `changeItemTile`, `setLevelItem` and `batch`.
 
 ### Suggested folder structure
 ```
@@ -165,7 +165,7 @@ User picks between two modes:
 - Covers world commands only (place, move, rotate, paint, setLevel, digUp, sell, store).
 - Task completion has "Undo complete" (§4.1).
 
-> Updated by D036: `store` and `sell` replace `remove`.
+> Updated by D036: `store` and `sell` replace `remove`. The command list also includes `changeItemTile`, `setLevelItem` and `batch`.
 
 ### 4.9 Save
 - Autosave to localStorage after every change (debounced ~500ms).
@@ -205,6 +205,8 @@ interface Cell { x: number; z: number; type: TileType; level: number } // level 
 - **Change type:** all 3 types shown; disallowed ones greyed out and disabled.
 - **Height slider:** dragging up adds tiles of the same type; dragging down removes them. Range is 1 to `maxStack` (§5.4).
 - **Dig up** button.
+
+> Updated by D029: the tile popover only opens for uncovered tiles, so all 3 types are available there. Tiles under an item are edited from the item popover.
 
 ### 5.4 Stacking rules
 - Any tile type can sit next to any other type at any level. There are no water or neighbour rules.
@@ -267,6 +269,8 @@ All must pass:
 - **Height** slider (moves the whole footprint's cells together)
 - **Store** (to inventory)
 - **Sell** (shows refund amount, confirm dialog)
+
+> Updated by D033: Rotate is shown for every item, including connectable items.
 
 ### 6.5 Connectable items (fences, paths, hedges)
 - Model as **2 meshes:** `post` (centre) and `arm` (half-cell rail pointing +Z).
@@ -408,24 +412,26 @@ Price tiers (guide): small plants 5–15 · larger plants/props 20–40 · build
 
 All tunable values live in `src/config/evergrow.config.ts`. This is the list of settings it holds; the exact names and values are defined in the code.
 
-- **fonts:** title (app name only), heading, body
+- **appName:** app title
+- **fonts:** title (app name only), heading, body, fallback
 - **economy:** taskReward, subtaskShare
   > Updated by D035: tiles are always free and coins can't go negative, so neither is a setting.
 - **focus**
   - free: coinsPerBlock, blockMinutes, minMinutes
   - pomodoro: focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, coinsPerBlock
 - **world:** maxSize, startZone, buildableRing, maxStack, minStack, tileThickness (fixed), chunkSize, cameraBoundsMargin
-- **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
+- **camera:** minPolarDeg, maxPolarDeg, minZoom, maxZoom, homePosition, defaultZoom, snapRotateDeg, transitionMs, panSpeed, rotateSpeed, zoomSpeed
+- **history:** limit
 - **motion:** dropFadeMs, digUpFadeMs, tileAddFadeMs, coinCountUpMs, gridFadeMs, panelMs, ghostLerpMs, ghostOpacity
 - **dayNight:** useLocalTime, keyframes (dawn, day, dusk, night)
 - **rendering:** shadowMapSize, maxPointLights, pixelRatioCap, quality (high or low), bloom
 - **variation:** scale, hue
-- **ui:** toastMs, autosaveDebounceMs
+- **ui:** toastMs, autosaveDebounceMs, storagePrefix, fallback (WebGL message layout)
 - **starter:** coins, items
 - **palette:** shared colours (background per time of day, valid/invalid tint, UI)
 - **tiles:** grass ("Grass"), land ("Land"), water ("Water", semi-transparent top)
 - **items:** the item catalog (name, category, footprint, allowedTiles, price; see §6.1)
-- **strings:** invalid-reason messages
+- **strings:** invalid-reason messages, WebGL-unavailable message
 - **saveSchemaVersion:** 1
 
 ---

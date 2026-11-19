@@ -11,6 +11,10 @@ connection masks and undoable world commands. The typed config catalog exists an
 full-window orthographic R3F canvas renders the day background. Logic is not wired to
 stores, rendering or UI yet.
 
+**Next step:** build the Zustand world store on top of `src/logic/commands.ts`, then
+render tiles and items. Open decisions: D003 (item catalog and starter item), D007
+(fonts) and D034 (no-op undo steps).
+
 ## Workflow rules
 
 - Work on a branch, never directly on main: step/<short-name> for a build step, fix/<short-name> for review fixes, docs/<short-name> for docs-only work.
@@ -20,7 +24,7 @@ stores, rendering or UI yet.
 - Merge into main only after a review says READY, as one squash commit: git switch main && git merge --squash <branch> && git commit -m "<subject>", then git branch -D <branch> (-D because Git doesn't treat squash-merged branches as merged).
 - Don't rewrite commits already pushed to origin/main. Fix forward with a new commit.
 - Push main once per task, after the merge. GitHub Pages deploys every push to main.
-- Record build, fix and docs sessions in docs/STATE.md. Don't record review sessions.
+- Record build and fix sessions in docs/STATE.md. Don't record docs or review sessions.
 - Each session prompt names its type (BUILD, FIX, DOCS or REVIEW). Review sessions report only and change no code or docs.
 - Dependabot PRs: batch them into one fix/ branch instead of merging each one.
 
@@ -32,88 +36,10 @@ Handle these when the store and UI call the world commands:
   cell under an item (D029), and `executeBatch` does not catch it, so one covered cell
   aborts the whole stroke instead of being skipped. BRIEF §5.3 only makes paint and dig
   up drag tools, and height uses a slider. Use `setLevelItem` for covered cells.
-- **Some commands record an undo step that changes nothing.** Digging an empty cell and
-  painting a tile its current type both succeed and add a history entry, so undo appears
-  to do nothing. This also applies to those commands inside a drag stroke. See D034.
-
-## Log
-
-### 2026-11-17
-
-Done:
-
-- Scaffolded Vite + React + TypeScript with strict mode, npm scripts and folder layout.
-- Added the fully typed config catalog, 15 tests, lint and build.
-- Rendered a full-window orthographic canvas using the day background `#d7e0e9`.
-- Set the starter item and item catalog to pending (`items: []`).
-- Initialized the GitHub repo and automatic GitHub Pages deployment.
-- Added base-aware `assetUrl()` and namespaced `storageKey()` helpers plus `404.html`.
-- Added release/community docs: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY,
-  CHANGELOG, ARCHITECTURE, RELEASING, DECISIONS, STATE, and this progress log.
-- Made `BRIEF.md` tracked and reorganised docs.
-
-Known issues / not done:
-
-- No game features: tasks, economy, focus, shop, inventory, world, tiles, placement,
-  camera, day/night, audio, tutorial and save system are unimplemented.
-- Item catalog, starter item, fonts and 3D assets are undecided/missing.
-- Build reports a non-fatal chunk-size warning from Three.js.
-- `404.html` derives the project root from the first URL segment; custom domains
-  would need a different redirect.
-- README screenshot and several community/legal placeholders still need filling.
-- No browser automation or visual tests; UI tests are jsdom-only.
-
-### 2026-11-17 — review fixes
-
-Done:
-
-- Renamed the config export to readonly `CONFIG` using readonly config interfaces.
-- Made the canvas orthographic and added a WebGL error boundary/fallback.
-- Tightened tests to the brief's fixed values and added a production-base asset test.
-- Moved app name and theme colour out of `index.html` into config at build time.
-- Stopped applying missing font families; set Node 22 in `.nvmrc` and CI.
-- Ignored `session.json` and removed machine-specific session details from STATE.
-- Re-review fixes: readonly typed `CONFIG`, config-driven camera/strings, catalog
-  validator, UI tests, 404 title, and Node 22. Tests now total 25.
-
-Known issues: item catalog, fonts and game systems are still pending; the build still
-reports a chunk-size warning; no browser or visual tests yet.
-
-### 2026-11-17 — scaffold review
-
-Reviewed 668549a, then the fixes in f7d69e2..3beca47 and 8f6c0e8..303a29b.
-Verdict: **ready for the next step.** The scaffold acceptance criteria are met:
-full-window canvas in the day colour, build with no type errors, 25/25 tests, and a
-fully typed, readonly `CONFIG`. Each fix commit passes tests, typecheck and lint.
-
-Done in the final round:
-
-- WebGL fallback now fills the window.
-- App test checks the drawn `<color>` background, not just the canvas style.
-- Config type test no longer depends on the `quality` value.
-- Empty-catalog length checks removed; `validateCatalog` still checks `CONFIG`.
-- Original progress entry and 404 link text restored.
-
-Carried forward:
-
-- `src/App.test.tsx` assumes the canvas has a single child (`<color>`).
-  **Do:** find the `color` element among the canvas children instead of casting the
-  only child. **When:** in the first step that adds anything inside `<Canvas>`
-  (lights, world, camera rig).
-- Console shows a `THREE.Clock` deprecation warning from `@react-three/fiber`, not
-  from project code. **Do:** nothing in project code; check that it's gone after
-  upgrading `@react-three/fiber`. **When:** at the next dependency update.
-
-### 2026-11-17 — Pages review fixes
-
-Done:
-
-- Added a base-aware SVG favicon, removing the `/favicon.ico` 404.
-- Set Pages concurrency to let running deploys finish and recorded Node 22 in DECISIONS.
-- Added a guard test against direct `localStorage` access and a tested 404 redirect helper.
-- Added the deploy badge, deployment section and updated README prerequisites/commands.
-
-Tests now total 29.
+- **Some commands record an undo step that changes nothing.** See D034 for the full
+  list. This also applies to those commands inside a drag stroke.
+- **Check `canUndo` and `canRedo` before calling `undo` and `redo`.** Both throw on an
+  empty history. Start a new history from `EMPTY_HISTORY`.
 
 ## Reproduce from scratch
 
@@ -121,14 +47,15 @@ Tests now total 29.
 npm create vite@latest evergrow -- --template react-ts
 cd evergrow
 npm install zustand three @react-three/fiber @react-three/drei
-npm install -D @types/three vitest
+npm install -D @types/three vitest @vitest/coverage-v8 jsdom @testing-library/react
 ```
 
 Then:
 
 1. Set `"strict": true` in `tsconfig.app.json` and `tsconfig.node.json`.
 2. Set `package.json` scripts: `dev`, `build` (`tsc -b && vite build`), `preview`,
-   `lint`, `typecheck` (`tsc -b`), `test` (`vitest run`), `test:watch` (`vitest`).
+   `lint`, `typecheck` (`tsc -b`), `test` (`vitest run`), `coverage`
+   (`vitest run --coverage`), `test:watch` (`vitest`).
 3. Create the folders listed below with `.gitkeep` files where empty.
 4. Create `src/config/evergrow.config.ts` using the `EvergrowConfig` type.
 5. Replace the Vite demo with `src/App.tsx` rendering a full-window `<Canvas>`.
@@ -141,7 +68,7 @@ Then:
 
 | Tool | Version |
 |---|---|
-| Node | 22 (CI and .nvmrc); 26.13.1 locally |
+| Node | 26 (`.nvmrc`, CI and local 26.13.1) |
 | npm | 11.20.0 |
 | TypeScript | 7.0.2 |
 | Vite | 8.3.8 |
@@ -151,8 +78,9 @@ Then:
 | @react-three/drei | 10.7.9 |
 | zustand | 5.1.0 |
 | vitest | 5.1.0 |
+| @vitest/coverage-v8 | 5.1.0 |
 | jsdom / Testing Library | installed for App tests |
-| oxlint | 1.90.0 |
+| oxlint | 1.94.0 |
 
 The current Vite template uses **oxlint** (not ESLint). Keep it unless there is a
 reason to migrate.
@@ -163,6 +91,7 @@ reason to migrate.
 src/
   config/evergrow.config.ts     # every tunable value + catalogs (single source of truth)
   logic/                        # pure TS modules, no React/Three imports
+  logic/testing/                # shared test fixtures (excluded from coverage)
   store/                        # Zustand slices
   scene/                        # R3F components
   ui/                           # React DOM UI
@@ -177,8 +106,9 @@ docs/                           # progress, decisions, architecture, release doc
 1. World rules (grid, cells, stacking, footprints, validation, economy) are pure TS
    in `src/logic/` with no Three.js or React imports. Unit-test before wiring UI.
 2. All tunables live in `src/config/evergrow.config.ts`. No magic numbers elsewhere.
-3. All world mutations go through commands (`place`, `move`, `rotate`,
-   `paint`, `setLevel`, `digUp`, `sell`, `store`) so undo/redo is uniform.
+3. All world mutations go through commands (`place`, `move`, `rotate`, `store`, `sell`,
+   `paint`, `changeItemTile`, `setLevel`, `setLevelItem`, `digUp`, plus `batch` for one
+   drag stroke through `executeBatch`) so undo/redo is uniform.
 4. Never store absolute Y. Derive it as `level * world.tileThickness`.
 5. Autosave to localStorage, debounced with `ui.autosaveDebounceMs`, including
    `saveSchemaVersion`. Every key must go through `storageKey()` in
@@ -200,7 +130,7 @@ GitHub Pages, deployed by `.github/workflows/deploy.yml` on every push to `main`
 (or manually via `workflow_dispatch`).
 
 - Builds use `base: "/<repo>/"` (derived from `GITHUB_REPOSITORY`, overridable with
-  `VITE_BASE_PATH`). Local dev always uses `/`.
+  `VITE_BASE_PATH`). Local dev uses `/` unless `VITE_BASE_PATH` is set.
 - Order: checkout → Node 26 (`.nvmrc`) → `npm ci` → `npm run lint` → `npm test` →
   `npm run build` → upload `dist/` → deploy. A lint or test failure stops the deploy.
 - Pull requests run lint, tests and build through `.github/workflows/ci.yml`.
@@ -332,15 +262,18 @@ The module is split across five files; other code imports from `./commands` only
 - `apply(command, state, catalog)` returns `{ state, inverse }`. Cells and items are
   restored exactly by the inverse; coins and inventory change by deltas (D030).
   `place` and `move` create their auto tiles through `validatePlacement`, and `place`
-  undo removes only the tiles it created. A uid already in `items` throws, including
-  inside a batch: callers supply uids (D031), so a duplicate is a caller bug.
+  undo removes only the tiles it created. `validate` throws on a uid already in
+  `items`, including inside a batch: callers supply uids (D031), so a duplicate is a
+  caller bug.
 - `History { past, future }` is immutable. `execute` validates, applies, pushes onto
   `past` and clears `future`; failures leave both unchanged. `undo` and `redo`
   re-validate first and return the failure reason unchanged (D030).
   `canUndo` / `canRedo` inspect the stacks.
-- `execute` and `redo` keep at most `CONFIG.history.limit` past entries, dropping the
-  oldest (D032). `future` only receives entries from `past`, so it cannot exceed the
-  limit.
+- `undo` and `redo` throw on an empty history; check `canUndo` / `canRedo` first. A new
+  history starts from `EMPTY_HISTORY`.
+- `execute`, `executeBatch` and `redo` keep at most `CONFIG.history.limit` past
+  entries, dropping the oldest (D032). `future` only receives entries from `past`, so
+  it cannot exceed the limit.
 - `executeBatch(history, state, commands, catalog)` runs one drag stroke as one
   history entry. Sub-commands run in order and are skipped on failure; the result
   reports `{ index, reason }` in `skipped`. Only applied commands are recorded, and
@@ -379,23 +312,6 @@ Calls every exported map function and pure helper (`setCell`,
 `getConnectionMask`), snapshotting inputs with `structuredClone` and asserting they
 are deep-equal afterwards.
 
-### Reproduce this step
-
-1. Create `src/logic/grid.ts` and `src/logic/cells.ts` as above.
-2. Add `grid.test.ts`, `cells.test.ts`, `purity.test.ts` and `importGuard.test.ts`.
-3. Covered cases: key formatting and throwing; N/E/S/W neighbours; start-zone
-   and world edges derived from `CONFIG`; 6 cells from a tile buildable and 7 not;
-   outside `maxSize` rejected even inside the ring; single-cell `landBounds`;
-   level 1/`maxStack` accepted and 0/`maxStack+1`/NaN/2.5/±Infinity rejected with the
-   input unchanged; paint create/type-change/outside-zone/outside-world and invalid
-   coordinates; digUp 3→2, 1→removed, empty unchanged and invalid coordinates; level
-   range; input purity; no rendering/store imports.
-4. `npm test` (88), `npm run build`, `npm run lint`.
-
-Still to do next: item checks for tile tools (dig up under an item, `allowedTiles`),
-commands, world store and rendering. Footprints, placement validation and connection
-masks are now in `src/logic`; commands, stores and rendering remain out of scope.
-
 ## Release and community docs
 
 - `LICENSE` (MIT, copyright holder placeholder)
@@ -413,6 +329,85 @@ masks are now in `src/logic`; commands, stores and rendering remain out of scope
 - Live demo: https://yx0128.github.io/evergrow/ (GitHub Pages, deployed by `.github/workflows/deploy.yml`)
 - Default branch: `main`.
 - Branch and commit rules: see Workflow rules above (D021).
+
+## Log
+
+### 2026-11-17
+
+Done:
+
+- Scaffolded Vite + React + TypeScript with strict mode, npm scripts and folder layout.
+- Added the fully typed config catalog, 15 tests, lint and build.
+- Rendered a full-window orthographic canvas using the day background `#d7e0e9`.
+- Set the starter item and item catalog to pending (`items: []`).
+- Initialized the GitHub repo and automatic GitHub Pages deployment.
+- Added base-aware `assetUrl()` and namespaced `storageKey()` helpers plus `404.html`.
+- Added release/community docs: LICENSE, CONTRIBUTING, CODE_OF_CONDUCT, SECURITY,
+  CHANGELOG, ARCHITECTURE, RELEASING, DECISIONS, STATE, and this progress log.
+- Made `BRIEF.md` tracked and reorganised docs.
+
+Known issues / not done:
+
+- No game features: tasks, economy, focus, shop, inventory, world, tiles, placement,
+  camera, day/night, audio, tutorial and save system are unimplemented.
+- Item catalog, starter item, fonts and 3D assets are undecided/missing.
+- Build reports a non-fatal chunk-size warning from Three.js.
+- `404.html` derives the project root from the first URL segment; custom domains
+  would need a different redirect.
+- README screenshot and several community/legal placeholders still need filling.
+- No browser automation or visual tests; UI tests are jsdom-only.
+
+### 2026-11-17 — review fixes
+
+Done:
+
+- Renamed the config export to readonly `CONFIG` using readonly config interfaces.
+- Made the canvas orthographic and added a WebGL error boundary/fallback.
+- Tightened tests to the brief's fixed values and added a production-base asset test.
+- Moved app name and theme colour out of `index.html` into config at build time.
+- Stopped applying missing font families; set Node 22 in `.nvmrc` and CI.
+- Ignored `session.json` and removed machine-specific session details from STATE.
+- Re-review fixes: readonly typed `CONFIG`, config-driven camera/strings, catalog
+  validator, UI tests, 404 title, and Node 22. Tests now total 25.
+
+Known issues: item catalog, fonts and game systems are still pending; the build still
+reports a chunk-size warning; no browser or visual tests yet.
+
+### 2026-11-17 — scaffold review
+
+Reviewed 668549a, then the fixes in f7d69e2..3beca47 and 8f6c0e8..303a29b.
+Verdict: **ready for the next step.** The scaffold acceptance criteria are met:
+full-window canvas in the day colour, build with no type errors, 25/25 tests, and a
+fully typed, readonly `CONFIG`. Each fix commit passes tests, typecheck and lint.
+
+Done in the final round:
+
+- WebGL fallback now fills the window.
+- App test checks the drawn `<color>` background, not just the canvas style.
+- Config type test no longer depends on the `quality` value.
+- Empty-catalog length checks removed; `validateCatalog` still checks `CONFIG`.
+- Original progress entry and 404 link text restored.
+
+Carried forward:
+
+- `src/App.test.tsx` assumes the canvas has a single child (`<color>`).
+  **Do:** find the `color` element among the canvas children instead of casting the
+  only child. **When:** in the first step that adds anything inside `<Canvas>`
+  (lights, world, camera rig).
+- Console shows a `THREE.Clock` deprecation warning from `@react-three/fiber`, not
+  from project code. **Do:** nothing in project code; check that it's gone after
+  upgrading `@react-three/fiber`. **When:** at the next dependency update.
+
+### 2026-11-17 — Pages review fixes
+
+Done:
+
+- Added a base-aware SVG favicon, removing the `/favicon.ico` 404.
+- Set Pages concurrency to let running deploys finish and recorded Node 22 in DECISIONS.
+- Added a guard test against direct `localStorage` access and a tested 404 redirect helper.
+- Added the deploy badge, deployment section and updated README prerequisites/commands.
+
+Tests now total 29.
 
 ### 2026-11-17 — storage, redirect and favicon review
 
@@ -1103,3 +1098,30 @@ Verification:
   `src/config/evergrow.config.test.ts`.
 - A temporary `src/__probe.ts` with `process.env.X` reported only TS2591.
 - `git diff f2800c7 --stat` lists only the four allowed files.
+
+### 2026-11-19 — docs: sync docs with the code
+
+Done:
+
+- Corrected tooling and setup docs: Node 26 and oxlint 1.94.0, coverage tooling,
+  the reproduce steps and the local base path.
+- Synced world logic and architecture docs: the full command list, batch and history
+  behaviour, the no-op command list (D034), the layers diagram and deployment.
+- Aligned BRIEF §5.3, §6.4 and §14, D003, D012, D019 and the decisions table.
+- Moved `## Log` to the end of the file, below the reference sections, as one
+  contiguous section.
+- Workflow rules: docs sessions are no longer recorded in docs/STATE.md.
+
+Why: the docs had drifted from the split command modules, coverage setup, history
+behaviour and config after the recent build and fix sessions.
+
+Verification:
+
+- `npm test` 262/262, `npm run build` and `npm run lint` pass (existing chunk-size
+  warning only).
+- The D034 no-op cases were checked with a throwaway test file (deleted afterwards);
+  each returned ok and added one history entry.
+- `git diff --stat main` lists only README.md, docs/ARCHITECTURE.md, docs/BRIEF.md,
+  docs/DECISIONS.md and docs/PROGRESS.md.
+- A sorted-line comparison of docs/PROGRESS.md against e7ebb49 shows only the "Done"
+  bullet changes above; no other line was added or removed.

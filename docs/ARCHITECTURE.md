@@ -5,23 +5,24 @@ Evergrow is a static desktop-browser game. There is no backend; all state is loc
 ## Layers
 
 ```
-React UI (src/ui)  ─┐
-R3F scene (src/scene)├─ read ──► Zustand stores (src/store)
-Command system      ─┘                 │
-                                      ▼
-                           Pure logic (src/logic)
-                                      │
-                                      ▼
-                    Config (src/config/evergrow.config.ts)
+React UI (src/ui) ──────┐
+                        ├─► Zustand stores (src/store) ─► Pure logic (src/logic)
+R3F scene (src/scene) ──┘                                        │
+                                                                 ▼
+                                       Config (src/config/evergrow.config.ts)
 ```
 
+**Status:** config, pure logic and the canvas shell exist. Stores, scene content, game
+UI and save/load are planned.
+
 - **Config** is the single source of truth for tunables, catalogs and strings.
-- **Logic** is framework-free TypeScript and unit-tested. It must not import React,
-  Three.js, R3F or the browser DOM.
-- **Stores** hold session state and dispatch commands. Persistence goes through
-  `src/logic/save.ts`.
-- **Scene** reads state and renders it. It never mutates world rules directly.
-- **UI** dispatches commands and reads store selectors.
+- **Logic** is framework-free TypeScript and unit-tested, including the world commands
+  and undo history. It must not import React, Three.js, R3F, Zustand, stores, the scene
+  or the browser DOM.
+- **Stores** will hold session state and run commands. Persistence will go through
+  `src/logic/save.ts`, which currently provides only `storageKey()`.
+- **Scene** will read state and render it. It never changes world rules directly.
+- **UI** will read store selectors and call store actions.
 
 ## World model
 
@@ -32,15 +33,17 @@ Command system      ─┘                 │
 
 ## Assets
 
-- Source scripts live in `assets-src/blender/`; exports land in
-  `public/assets/{models,thumbs,fonts}/`.
+- Source scripts live in `assets-src/blender/`; models and thumbnails export to
+  `public/assets/{models,thumbs}/`. Font files are supplied separately in
+  `public/assets/fonts/`.
 - Catalog paths are relative (`assets/models/...`). Render with `assetUrl()`.
 - 1 Blender unit = 1 grid cell; front faces −Y; transforms applied.
 
 ## Deployment
 
 Static build deployed to GitHub Pages by `.github/workflows/deploy.yml`. The build
-base is `/<repo>/`; local dev runs at `/`. Tests gate deployment.
+base is `/<repo>/`; local dev runs at `/` unless `VITE_BASE_PATH` is set. Lint and
+tests gate deployment.
 
 ## Constraints
 
